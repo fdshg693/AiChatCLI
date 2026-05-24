@@ -1,0 +1,20 @@
+---
+description: Workflow tool architecture and conventions
+globs: devtools/workflow/**
+alwaysApply: false
+---
+# Cursor Workflow
+
+- `devtools/workflow/` contains the Python CLI that runs `cursor-agent` in multiple steps and stores outputs under `runs/`.
+- The main package lives in `src/workflow_cli/`.
+- Workflow definitions live in `workflows/`, and task-specific prompts live in `prompt_configs/`.
+
+## Conventions
+
+- Keep the workflow tool independent from the .NET app; do not embed the Python runner into `src/AiChatCLI/`.
+- App runtime details such as `AppPaths`, `ChatTurnPipeline`, `ConversationCodec`, `ThreadRecorder`, thread replay, chat logging, and slash-command behavior belong in `src/AiChatCLI/README.md`; keep workflow docs focused on the Python runner itself.
+- Prefer reusable `extends` and `compose` fragments for shared step structure.
+- Keep task-specific prompt text and variables in `prompt_configs/*.yaml`.
+- Paths in workflow JSON are resolved relative to the file that defines them.
+- On Windows, prefer argument-array process execution over shell-built command strings.
+- When workflow archetypes, sample commands, or prompt-config examples change, update `devtools/workflow/README.md` in the same task.

@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "name": "plan-approach",
+      "mode": "plan",
+      "force": false,
+      "yolo": false
+    }
+  ]
+}

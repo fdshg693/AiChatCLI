@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "name": "review",
+      "mode": "ask",
+      "force": false,
+      "yolo": false
+    }
+  ]
+}

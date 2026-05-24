@@ -1,0 +1,32 @@
+run_name: aichatcli-complex-chat-history-logging
+variables:
+  repo_name: AiChatCLI
+  task_summary: design and implement chat history logging with a safe rollout plan
+  acceptance_criteria: add the feature, preserve current chat behavior, and surface enough design context for future expansion
+steps:
+  repository-survey:
+    prompt: |
+      Survey the `${repo_name}` codebase for the work needed to support ${task_summary}.
+
+      Identify the current chat flow, where conversation state exists today, what files are most relevant, and what risks or constraints should shape the implementation.
+  plan-approach:
+    prompt: |
+      Create a concrete implementation plan for `${repo_name}` based on the survey findings.
+
+      Break the task into a few actionable steps, note risky areas, and explain how the acceptance criteria will be satisfied.
+  implement:
+    prompt: |
+      Execute the planned implementation for `${repo_name}`.
+
+      Acceptance criteria: ${acceptance_criteria}.
+      Keep the implementation aligned with the survey and plan, and avoid widening the scope beyond what is needed to ship the feature.
+  review:
+    prompt: |
+      Review the resulting implementation for `${repo_name}`.
+
+      Focus on requirement coverage, regressions, architectural fit, and any places where the execution drifted from the original plan.
+  apply-review-fixes:
+    prompt: |
+      Resolve the review findings for `${repo_name}` and finish the task cleanly.
+
+      Keep the final state consistent with ${task_summary} and the stated acceptance criteria.

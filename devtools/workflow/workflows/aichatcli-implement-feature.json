@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "extends": "./aichatcli-write-defaults.json",
+  "compose": [
+    "./aichatcli-implement-step.fragment.json",
+    "./aichatcli-review-step.fragment.json",
+    "./aichatcli-apply-review-fixes-step.fragment.json"
+  ],
+  "name": "aichatcli-implement-feature",
+  "description": "Write-enabled workflow archetype for implementation, review, and review fixes."
+}

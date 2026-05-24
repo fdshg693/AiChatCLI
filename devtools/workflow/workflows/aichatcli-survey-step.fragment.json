@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {
+      "name": "repository-survey",
+      "mode": "ask",
+      "force": false,
+      "yolo": false
+    }
+  ]
+}

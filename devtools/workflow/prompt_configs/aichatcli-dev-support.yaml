@@ -1,0 +1,15 @@
+run_name: aichatcli-dev-support
+variables:
+  repo_name: AiChatCLI
+  focus_area: overall architecture, prompt handling, and workflow integration
+steps:
+  repository-survey:
+    prompt: |
+      Survey `${repo_name}` with a focus on ${focus_area}.
+
+      Summarize the main runtime flow, the most important source files, and any implementation constraints that matter for follow-up work.
+  plan-approach:
+    prompt: |
+      Based on the repository survey, propose a practical development backlog for `${repo_name}`.
+
+      Group the work into a few logical themes, call out dependencies or sequencing, and suggest the next task that should be tackled first.

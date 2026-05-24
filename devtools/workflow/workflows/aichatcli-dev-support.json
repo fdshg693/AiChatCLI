@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "extends": "./aichatcli-readonly-defaults.json",
+  "compose": [
+    "./aichatcli-survey-step.fragment.json",
+    "./aichatcli-plan-step.fragment.json"
+  ],
+  "name": "aichatcli-dev-support",
+  "description": "Read-only workflow archetype for repository survey and planning."
+}

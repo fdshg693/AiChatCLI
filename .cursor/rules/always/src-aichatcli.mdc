@@ -1,0 +1,25 @@
+---
+description: AiChatCLI app architecture and conventions
+globs: src/AiChatCLI/**
+alwaysApply: false
+---
+# AiChatCLI App
+
+- `src/AiChatCLI/` is the .NET 9 console REPL for chatting with OpenAI models.
+- Entry point is `Program.cs`, which wires dependencies manually without a DI container and resolves runtime file locations through `AppPaths`.
+- Processing flow: user input -> `InteractivePromptReader` -> `ChatLoop` -> `ChatTurnPipeline` -> slash command handling or prompt transformation/logging -> `IChatService` -> console output.
+- `ThreadSessionManager` owns current-thread lifecycle and replay. `ThreadRecorder` owns append-only thread event writes under the configured thread log directory.
+- `ConversationCodec` is the shared mapper for live AutoGen messages and persisted `ThreadMessageRecord` values. Keep replay and live turn semantics aligned there instead of duplicating conversions.
+- Agent-callable tool availability is centralized in `AgentToolCatalog`; base tool adoption comes from `Tools:Enabled` config, while main/sub-agent exposure rules stay in code. Keep `OpenAIAgentFactory` and user-visible status/help output driven by that same catalog instead of duplicating tool lists.
+- Runtime files such as `agents.json`, `prompts.json`, `memory.json`, chat logs, and thread logs are configurable via `appsettings.json` `Paths:*`. Relative path values are resolved from the app content root via `AppPaths`.
+
+## Conventions
+
+- New chat backends should implement `IChatService`.
+- `IChatService` implementations are expected to support restoring persisted conversation state when thread replay is enabled.
+- New template processors should implement `IPromptTemplateProcessor`.
+- New slash commands should implement `ISlashCommand.Execute(string[] args, TextWriter output)` and be registered in `Program.cs`.
+- Slash commands that mutate conversation context, especially `/agent` and `/thread`, should keep `AgentSelection`, `IChatService`, and `ThreadSessionManager` in sync.
+- Changes that affect thread replay, tool aggregates, or persisted message shape should update both `ConversationCodec` and the focused tests in `tests/AiChatCLI.Tests/`.
+- When user-facing CLI behavior changes, update `src/AiChatCLI/README.md` together with the implementation.
+- Nullable reference types and implicit usings are enabled.

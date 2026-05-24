@@ -1,0 +1,26 @@
+**/bin/
+**/obj/
+src/AiChatCLI/appsettings.local.json
+*.env
+logs/
+
+src/AiChatCLI/memory.json
+devtools/workflow/runs/
+
+bin/
+obj/
+build/
+dist/
+
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# ビルド確認用
+artifacts/
+temp_build_verify/
+

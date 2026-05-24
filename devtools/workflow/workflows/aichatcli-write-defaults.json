@@ -1,0 +1,20 @@
+{
+  "description": "Shared write-enabled Cursor CLI defaults for AiChatCLI workflow fragments.",
+  "variables": {
+    "repo_name": "AiChatCLI"
+  },
+  "defaults": {
+    "command": "cursor-agent",
+    "workspace": "../../..",
+    "cwd": "../../..",
+    "mode": null,
+    "output_format": "text",
+    "print_mode": true,
+    "force": true,
+    "yolo": true,
+    "sandbox": "disabled",
+    "approve_mcps": false,
+    "trust": false,
+    "extra_args": []
+  }
+}

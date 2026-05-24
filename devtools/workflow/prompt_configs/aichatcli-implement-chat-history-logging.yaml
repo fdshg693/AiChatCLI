@@ -1,0 +1,22 @@
+run_name: aichatcli-implement-chat-history-logging
+variables:
+  repo_name: AiChatCLI
+  task_summary: add chat history logging support
+  acceptance_criteria: persist enough conversation history to inspect past turns without breaking the current interactive flow
+steps:
+  implement:
+    prompt: |
+      Implement the following feature in `${repo_name}`: ${task_summary}.
+
+      Acceptance criteria: ${acceptance_criteria}.
+      Make the necessary code changes, keep the existing architecture coherent, and update docs or configuration only when needed.
+  review:
+    prompt: |
+      Review the implementation for `${repo_name}` against the requested task.
+
+      Focus on correctness, regressions, missing edge cases, and whether the acceptance criteria were actually met.
+  apply-review-fixes:
+    prompt: |
+      Address the issues found in the review for `${repo_name}`.
+
+      Close the important gaps, keep the scope aligned with ${task_summary}, and avoid unrelated refactors unless they are required to finish the task safely.
