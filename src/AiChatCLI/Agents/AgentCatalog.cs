@@ -7,13 +7,25 @@ internal sealed class AgentCatalog
     private readonly Dictionary<string, string> _agents;
     private readonly string _agentsPath;
     private readonly string? _legacySystemPromptsPath;
+    private readonly IReadOnlyDictionary<string, string> _builtInPlaceholders;
+    private readonly int _maxPlaceholderDepth;
 
-    public AgentCatalog(string agentsPath, string? legacySystemPromptsPath = null)
+    public AgentCatalog(
+        string agentsPath,
+        string? legacySystemPromptsPath = null,
+        IReadOnlyDictionary<string, string>? builtInPlaceholders = null,
+        int maxPlaceholderDepth = 10)
     {
         _agentsPath = agentsPath;
         _legacySystemPromptsPath = legacySystemPromptsPath;
+        _builtInPlaceholders = builtInPlaceholders ?? new Dictionary<string, string>();
+        _maxPlaceholderDepth = maxPlaceholderDepth;
 
-        var loaded = LoadAgents(agentsPath, legacySystemPromptsPath);
+        var loaded = LoadAgents(
+            agentsPath,
+            legacySystemPromptsPath,
+            _builtInPlaceholders,
+            _maxPlaceholderDepth);
         _agents = loaded.Agents;
         SourcePath = loaded.SourcePath;
     }
@@ -30,7 +42,11 @@ internal sealed class AgentCatalog
     {
         try
         {
-            var loaded = LoadAgents(_agentsPath, _legacySystemPromptsPath);
+            var loaded = LoadAgents(
+                _agentsPath,
+                _legacySystemPromptsPath,
+                _builtInPlaceholders,
+                _maxPlaceholderDepth);
             _agents.Clear();
             foreach (var kv in loaded.Agents)
                 _agents[kv.Key] = kv.Value;
@@ -50,7 +66,9 @@ internal sealed class AgentCatalog
 
     private static (Dictionary<string, string> Agents, string SourcePath) LoadAgents(
         string agentsPath,
-        string? legacySystemPromptsPath)
+        string? legacySystemPromptsPath,
+        IReadOnlyDictionary<string, string> builtInPlaceholders,
+        int maxPlaceholderDepth)
     {
         var sourcePath = ResolveSourcePath(agentsPath, legacySystemPromptsPath);
         Dictionary<string, string> agents;
@@ -68,7 +86,29 @@ internal sealed class AgentCatalog
         if (!agents.ContainsKey("default"))
             agents["default"] = "You are a helpful assistant.";
 
-        return (agents, sourcePath);
+        return (ExpandAgentPlaceholders(agents, builtInPlaceholders, maxPlaceholderDepth), sourcePath);
+    }
+
+    private static Dictionary<string, string> ExpandAgentPlaceholders(
+        Dictionary<string, string> agents,
+        IReadOnlyDictionary<string, string> builtInPlaceholders,
+        int maxPlaceholderDepth)
+    {
+        var expanded = new Dictionary<string, string>(agents.Comparer);
+        foreach (var (name, prompt) in agents)
+            expanded[name] = PlaceholderExpander.Expand(prompt, ResolvePlaceholder, maxPlaceholderDepth);
+
+        return expanded;
+
+        string? ResolvePlaceholder(string key)
+        {
+            if (builtInPlaceholders.TryGetValue(key, out var builtInValue))
+                return builtInValue;
+
+            return agents.TryGetValue(key, out var agentPrompt)
+                ? agentPrompt
+                : null;
+        }
     }
 
     private static string ResolveSourcePath(string agentsPath, string? legacySystemPromptsPath)

@@ -38,7 +38,11 @@ internal sealed class AppComposition : IDisposable
         try
         {
             var config = new AppConfig(paths);
-            var agentCatalog = new AgentCatalog(config.AgentsPath, config.LegacySystemPromptsPath);
+            var agentCatalog = new AgentCatalog(
+                config.AgentsPath,
+                config.LegacySystemPromptsPath,
+                AgentBuiltInPlaceholders.Create(),
+                config.MaxTemplateDepth);
             var agentSelection = new AgentSelection(agentCatalog);
             var memoryStore = new MemoryStore(config.MemoryPath);
             var memoryTools = new MemoryTools(memoryStore);

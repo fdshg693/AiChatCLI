@@ -135,6 +135,15 @@ translatorエージェント> こんにちは、世界！
 
 既定では `agents.json` で追加・編集でき、CLI からは `/agent ...` で操作します。外部で JSON を直接編集した場合は `/agent reload` で再読み込みできます。保存先は `Paths:Agents` で変更できます。互換性のため、agent 定義ファイルが無い場合は `Paths:LegacySystemPrompts`（既定では `system_prompts.json`）も読み込み対象になります。
 
+agent prompt 内で `%KEY%` を使うと、アプリ組み込み値または同じ `agents.json` 内の別 agent prompt を参照できます。アプリ組み込み値が同名の agent より優先されます。未定義の `%KEY%` はそのまま残ります。既定の組み込み値は `%SYSTEM_INFO%` で、OS、.NET runtime、command ツールが使うシェルと文字コード設定を含みます。
+
+```json
+{
+  "base": "You are a helpful assistant.",
+  "coder": "%base%\n\n%SYSTEM_INFO%"
+}
+```
+
 ## スレッド
 
 会話は thread 単位で構造化ログに保存され、起動時に current thread が自動作成されます。あとから `/thread use <id>` で読み込んで継続できます。

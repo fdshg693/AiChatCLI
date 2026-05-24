@@ -1,11 +1,9 @@
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace AiChatCLI;
 
 internal class PromptTemplateProcessor : IPromptTemplateProcessor
 {
-    private static readonly Regex s_templateReferencePattern = new(@"%([^%\s]+)%");
     private readonly PromptTemplateManager _templateManager;
     private readonly int _maxDepth;
 
@@ -51,23 +49,15 @@ internal class PromptTemplateProcessor : IPromptTemplateProcessor
         if (string.IsNullOrWhiteSpace(key) || !_templateManager.TryGetTemplate(key, out var rawTemplate))
             return false;
 
-        template = ExpandTemplateReferences(rawTemplate, 0);
+        template = PlaceholderExpander.Expand(rawTemplate, ResolveTemplateReference, _maxDepth);
         return true;
     }
 
-    private string ExpandTemplateReferences(string template, int depth)
+    private string? ResolveTemplateReference(string key)
     {
-        if (depth >= _maxDepth || string.IsNullOrEmpty(template))
-            return template;
-
-        return s_templateReferencePattern.Replace(template, match =>
-        {
-            var key = match.Groups[1].Value;
-            if (!_templateManager.TryGetTemplate(key, out var nestedTemplate))
-                return match.Value;
-
-            return ExpandTemplateReferences(nestedTemplate, depth + 1);
-        });
+        return _templateManager.TryGetTemplate(key, out var template)
+            ? template
+            : null;
     }
 
     private static bool IsTokenBoundary(string input, int index)
