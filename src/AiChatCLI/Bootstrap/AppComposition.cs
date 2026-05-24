@@ -42,8 +42,12 @@ internal sealed class AppComposition : IDisposable
             var agentSelection = new AgentSelection(agentCatalog);
             var memoryStore = new MemoryStore(config.MemoryPath);
             var memoryTools = new MemoryTools(memoryStore);
+            var commandTools = new CommandTools(
+                new ConsoleCommandApprovalPrompt(),
+                new LocalCommandExecutor());
             var toolCatalog = new AgentToolCatalog(config.EnabledBaseTools);
             toolCatalog.RegisterMemoryTool(memoryTools);
+            toolCatalog.RegisterCommandTool(commandTools);
             if (config.EnabledBaseTools.Contains(TavilySearchTools.BaseToolName))
             {
                 searchHttpClient = new HttpClient();

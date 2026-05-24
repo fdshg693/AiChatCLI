@@ -35,7 +35,7 @@ public sealed class ToolVisibilityTests : IDisposable
         var config = new AppConfig(paths);
 
         Assert.Equal(
-            [MemoryTools.BaseToolName, SubAgentTools.FunctionName],
+            [CommandTools.BaseToolName, MemoryTools.BaseToolName, SubAgentTools.FunctionName],
             config.EnabledBaseTools.OrderBy(name => name, StringComparer.Ordinal));
         Assert.Equal(Path.Combine(repoRoot, "agents.json"), config.AgentsPath);
         Assert.Equal(Path.Combine(repoRoot, "prompts.json"), config.PromptsPath);
@@ -245,6 +245,21 @@ public sealed class ToolVisibilityTests : IDisposable
     }
 
     [Fact]
+    public void AgentToolCatalog_ExposesCommandToolToMainAndSubAgents()
+    {
+        var toolCatalog = new AgentToolCatalog(
+            new HashSet<string>([CommandTools.BaseToolName], StringComparer.OrdinalIgnoreCase));
+        toolCatalog.RegisterCommandTool(CreateCommandTools());
+
+        Assert.Equal(
+            [CommandTools.BaseToolName],
+            toolCatalog.GetEnabledToolNames(AgentToolConsumer.MainAgent));
+        Assert.Equal(
+            [CommandTools.BaseToolName],
+            toolCatalog.GetEnabledToolNames(AgentToolConsumer.SubAgent));
+    }
+
+    [Fact]
     public void StatusCommand_ListsEnabledToolNamesForMainAndSubAgents()
     {
         var repoRoot = CreateRepoRoot("status-command");
@@ -334,6 +349,9 @@ public sealed class ToolVisibilityTests : IDisposable
         return new TavilySearchTools(client);
     }
 
+    private static CommandTools CreateCommandTools() =>
+        new(new StubCommandApprovalPrompt(), new StubCommandExecutor());
+
     private sealed class StubChatService : IChatService
     {
         public Task<ChatTurnResult> SendAsync(string message) =>
@@ -368,6 +386,18 @@ public sealed class ToolVisibilityTests : IDisposable
             {
                 Content = new StringContent(responseBody)
             });
+    }
+
+    private sealed class StubCommandApprovalPrompt : ICommandApprovalPrompt
+    {
+        public Task<CommandApprovalDecision> RequestApprovalAsync(string command) =>
+            Task.FromResult(CommandApprovalDecision.Approve());
+    }
+
+    private sealed class StubCommandExecutor : ICommandExecutor
+    {
+        public Task<CommandExecutionResult> ExecuteAsync(string command, TimeSpan timeout) =>
+            Task.FromResult(new CommandExecutionResult(0, string.Empty, string.Empty, false));
     }
 
     private sealed class EnvironmentVariableScope : IDisposable

@@ -1,9 +1,8 @@
 using System.Globalization;
-using System.Text.Encodings.Web;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Unicode;
 
 namespace AiChatCLI;
 
@@ -23,7 +22,9 @@ public sealed class ThreadRepository
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+            // Keep nested tool JSON readable in jsonl logs by using normal JSON escapes
+            // like \" instead of \u0022 while still preserving Unicode characters as-is.
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         _jsonOptions.Converters.Add(new JsonStringEnumConverter());
     }

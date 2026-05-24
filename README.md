@@ -19,6 +19,7 @@ CLI から AI と対話する .NET アプリと、その開発を支援する Cu
 - slash command による agent / prompt / thread の操作
 - `memory.json` を使った Function Calling ベースの長期メモリ
 - `sub_agent` ツールによる、独立した会話コンテキストのサブエージェント実行
+- 承認付き `command` ツールによるローカルコマンド実行
 - `logs/threads/*.jsonl` を正本にした thread 履歴復元と会話継続
 - 既存の人間向け `chat_*.txt` テキストログ出力
 

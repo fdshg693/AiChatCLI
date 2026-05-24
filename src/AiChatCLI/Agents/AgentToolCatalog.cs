@@ -39,6 +39,18 @@ public sealed class AgentToolCatalog
             AgentToolScope.MainAndSubAgent));
     }
 
+    /// <summary>
+    /// Registers the approval-gated local command execution tool.
+    /// </summary>
+    public void RegisterCommandTool(CommandTools commandTools)
+    {
+        Register(new AgentToolDescriptor(
+            CommandTools.BaseToolName,
+            commandTools.commandFunctionContract,
+            commandTools.commandWrapper,
+            AgentToolScope.MainAndSubAgent));
+    }
+
     public IReadOnlyList<string> GetEnabledToolNames(AgentToolConsumer consumer) =>
         GetEnabledTools(consumer)
             .Select(tool => tool.Name)

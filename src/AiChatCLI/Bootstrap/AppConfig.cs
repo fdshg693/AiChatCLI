@@ -88,7 +88,7 @@ public class AppConfig
             return tools;
 
         return new HashSet<string>(
-            [MemoryTools.BaseToolName, SubAgentTools.FunctionName],
+            [MemoryTools.BaseToolName, SubAgentTools.FunctionName, CommandTools.BaseToolName],
             StringComparer.OrdinalIgnoreCase);
     }
 

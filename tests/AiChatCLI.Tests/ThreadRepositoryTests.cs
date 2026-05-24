@@ -54,6 +54,33 @@ public sealed class ThreadRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void AppendEvent_WritesNestedToolJsonWithReadableEscapes()
+    {
+        var repository = new ThreadRepository(Path.Combine(_tempRoot, "threads"));
+        var threadId = repository.CreateThread("gpt-4o-mini", "default", "system prompt");
+
+        repository.AppendEvent(ThreadEvent.ToolResult(
+            threadId,
+            "session_1",
+            "default",
+            "default",
+            [
+                new ThreadToolCallRecord(
+                    "command",
+                    "{\"command\":\"date\",\"timeout_seconds\":30}",
+                    "{\"ok\":true,\"stdout\":\"2026年5月24日 15:30:15\"}",
+                    "call_1")
+            ]));
+
+        var filePath = repository.GetThreadFilePath(threadId);
+        var contents = File.ReadAllText(filePath);
+
+        Assert.Contains("\\\"command\\\":\\\"date\\\"", contents, StringComparison.Ordinal);
+        Assert.Contains("2026年5月24日 15:30:15", contents, StringComparison.Ordinal);
+        Assert.DoesNotContain("\\u0022", contents, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Constructor_UsesConfiguredDirectoryAsIs()
     {
         var configuredDirectory = Path.Combine(_tempRoot, "custom-store", "nested");
