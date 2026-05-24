@@ -26,7 +26,7 @@ defaultエージェント> exit
 | コマンド | 用途 |
 |---|---|
 | `/help` | コマンド体系と利用可能な操作を表示 |
-| `/status` | 現在のモデル、選択中 agent、利用可能 tool、current thread、定義ファイル、memory 状態などを表示 |
+| `/status` | 現在のモデル、選択中 agent、現在の agent / sub-agent に公開される tool、current thread、定義ファイル、memory 状態などを表示 |
 | `/agent` | agent 系コマンドのヘルプを表示 |
 | `/agent list` | エージェント一覧を表示 |
 | `/agent show <名前>` | 指定したエージェントの内容を表示 |
@@ -96,9 +96,9 @@ translatorエージェント> こんにちは、世界！
 | `translator` | 翻訳者 |
 | `coder` | プログラマー |
 
-既定では `agents.json` で追加・編集でき、CLI からは `/agent ...` で操作します。外部で JSON を直接編集した場合は `/agent reload` で再読み込みできます。保存先は `Paths:Agents` で変更できます。
+既定では `agents.json` で追加・編集でき、CLI からは `/agent ...` で操作します。`/agent list` と `/agent show <名前>` では、その agent に許可された tool も確認できます。外部で JSON を直接編集した場合は `/agent reload` で再読み込みできます。保存先は `Paths:Agents` で変更できます。
 
-`agents.json` は `defaults` と `agents` を持つ structured schema です。`defaults.systemPromptPrefix` に空でない値を設定すると、その内容が各 agent の system prompt 先頭に共通プレフィックスとして追加されます。
+`agents.json` は `defaults` と `agents` を持つ structured schema です。`defaults.systemPromptPrefix` に空でない値を設定すると、その内容が各 agent の system prompt 先頭に共通プレフィックスとして追加されます。各 agent は `prompt` と `tools` を持ち、利用可能な tool は agent ごとに切り替えられます。
 
 ```json
 {
@@ -106,13 +106,19 @@ translatorエージェント> こんにちは、世界！
     "systemPromptPrefix": "Always reply in Japanese."
   },
   "agents": {
-    "default": "You are a helpful assistant.",
-    "coder": "You are an expert programmer.\n\n%SYSTEM_INFO%\n\n%CURRENT_DIRECTORY_ENTRIES%"
+    "default": {
+      "prompt": "You are a helpful assistant.",
+      "tools": ["memory", "sub_agent", "command", "read_file"]
+    },
+    "coder": {
+      "prompt": "You are an expert programmer.\n\n%SYSTEM_INFO%\n\n%CURRENT_DIRECTORY_ENTRIES%",
+      "tools": ["memory", "sub_agent", "command", "read_file"]
+    }
   }
 }
 ```
 
-agent prompt 内で `%KEY%` を使うと、アプリ組み込み値または同じ `agents` オブジェクト内の別 agent prompt を参照できます。アプリ組み込み値が同名の agent より優先されます。未定義の `%KEY%` はそのまま残ります。既定の組み込み値は `%SYSTEM_INFO%` と `%CURRENT_DIRECTORY_ENTRIES%` です。`%SYSTEM_INFO%` は OS、.NET runtime、command ツールが使うシェルと文字コード設定を含み、`%CURRENT_DIRECTORY_ENTRIES%` はセッション current directory 直下のファイル・フォルダ一覧を含みます。`defaults.systemPromptPrefix` の値でも同じ組み込みプレースホルダー展開を使えます。
+agent prompt 内で `%KEY%` を使うと、アプリ組み込み値または同じ `agents` オブジェクト内の別 agent prompt を参照できます。アプリ組み込み値が同名の agent より優先されます。未定義の `%KEY%` はそのまま残ります。既定の組み込み値は `%SYSTEM_INFO%` と `%CURRENT_DIRECTORY_ENTRIES%` です。`%SYSTEM_INFO%` は OS、.NET runtime、command ツールが使うシェルと文字コード設定を含み、`%CURRENT_DIRECTORY_ENTRIES%` はセッション current directory 直下のファイル・フォルダ一覧を含みます。`defaults.systemPromptPrefix` の値でも同じ組み込みプレースホルダー展開を使えます。sub-agent は現在の agent が許可された tool を引き継ぎますが、`sub_agent` 自体は再帰呼び出し防止のため公開されません。
 
 ## スレッド
 
@@ -135,6 +141,6 @@ defaultエージェント> /thread use thread_20260421_230000_456_ef567890
 
 ## 次に読むべき文書
 
-- ツール有効化、`appsettings.local.json`、`Paths:*` は [`configuration.md`](configuration.md)
+- agent ごとの tool 定義、`appsettings.local.json`、`Paths:*` は [`configuration.md`](configuration.md)
 - 内部構成、拡張ポイント、テスト方針は [`development.md`](development.md)
 - コマンド、ツール、ログ出力先の一覧は [`reference.md`](reference.md)

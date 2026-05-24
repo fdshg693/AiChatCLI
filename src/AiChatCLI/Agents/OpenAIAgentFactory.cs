@@ -18,19 +18,23 @@ internal sealed class OpenAIAgentFactory
         _toolCatalog = toolCatalog;
     }
 
-    public IAgent CreateMainAgent(string agentName, string systemPrompt) =>
-        Create(agentName, systemPrompt, AgentToolConsumer.MainAgent);
+    public IAgent CreateMainAgent(string agentName, string systemPrompt, IReadOnlySet<string> enabledTools) =>
+        Create(agentName, systemPrompt, enabledTools, AgentToolConsumer.MainAgent);
 
-    public IAgent CreateSubAgent(string agentName, string systemPrompt) =>
-        Create(agentName, systemPrompt, AgentToolConsumer.SubAgent);
+    public IAgent CreateSubAgent(string agentName, string systemPrompt, IReadOnlySet<string> enabledTools) =>
+        Create(agentName, systemPrompt, enabledTools, AgentToolConsumer.SubAgent);
 
-    private IAgent Create(string agentName, string systemPrompt, AgentToolConsumer toolConsumer)
+    private IAgent Create(
+        string agentName,
+        string systemPrompt,
+        IReadOnlySet<string> enabledTools,
+        AgentToolConsumer toolConsumer)
     {
         var effectiveAgentName = string.IsNullOrWhiteSpace(agentName)
             ? "default"
             : agentName.Trim();
 
-        var (functions, functionMap) = _toolCatalog.GetBindings(toolConsumer);
+        var (functions, functionMap) = _toolCatalog.GetBindings(enabledTools, toolConsumer);
         IAgent agent = new OpenAIChatAgent(
             chatClient: _client.GetChatClient(_model),
             name: effectiveAgentName,

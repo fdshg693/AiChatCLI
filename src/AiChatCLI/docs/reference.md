@@ -7,7 +7,7 @@
 | コマンド | 役割 |
 |---|---|
 | `/help` | コマンド体系のヘルプ表示 |
-| `/status` | モデル、agent、tool、thread、memory、定義ファイルの状態確認 |
+| `/status` | モデル、agent、現在の agent / sub-agent tool、thread、memory、定義ファイルの状態確認 |
 | `/agent list` | agent 一覧表示 |
 | `/agent show <名前>` | agent 詳細表示 |
 | `/agent use <名前>` | agent 切り替え |
@@ -24,13 +24,13 @@
 
 ## agent-callable tool 一覧
 
-| tool | 既定 | 公開範囲 | 主な用途 | 補足 |
+| tool | 利用条件 | 公開範囲 | 主な用途 | 補足 |
 |---|---|---|---|---|
-| `memory` | 有効 | main / sub | 短い長期メモリ保存 | `Paths:Memory` を使う |
-| `sub_agent` | 有効 | main のみ | 独立コンテキストへ作業委譲 | sub-agent から再帰起動不可 |
-| `command` | 有効 | main / sub | 承認付きローカルコマンド実行 | 実行前に `YES/NO` が必要 |
-| `read_file` | 有効 | main / sub | ローカルファイルの読み取り | 読み取り専用 |
-| `search` | 無効 | main / sub | Tavily Web 検索 | `Tools:Enabled` と API キーが必要 |
+| `memory` | agent の `tools` に含める | main / sub | 短い長期メモリ保存 | `Paths:Memory` を使う |
+| `sub_agent` | agent の `tools` に含める | main のみ | 独立コンテキストへ作業委譲 | sub-agent から再帰起動不可 |
+| `command` | agent の `tools` に含める | main / sub | 承認付きローカルコマンド実行 | 実行前に `YES/NO` が必要 |
+| `read_file` | agent の `tools` に含める | main / sub | ローカルファイルの読み取り | 読み取り専用 |
+| `search` | agent の `tools` に含める | main / sub | Tavily Web 検索 | `Tavily:ApiKey` または環境変数が必要 |
 
 ## 主な設定キー
 
@@ -45,7 +45,6 @@
 | `Paths:ChatHistoryDirectory` | `logs` | テキストログ基底ディレクトリ |
 | `Paths:ThreadsDirectory` | `<ChatHistoryDirectory>/threads` | thread JSONL 保存先 |
 | `Paths:SubAgentThreadsDirectory` | `<ThreadsDirectory>/subagents` | sub-agent JSONL 保存先 |
-| `Tools:Enabled` | `memory`, `sub_agent`, `command`, `read_file` | base tool の公開制御 |
 
 ## 組み込みプレースホルダー
 

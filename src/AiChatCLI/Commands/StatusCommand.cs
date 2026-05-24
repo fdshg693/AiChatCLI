@@ -57,8 +57,8 @@ internal class StatusCommand : ISlashCommand
         output.WriteLine($"agent 件数: {_agentCatalog.GetAgents().Count}");
         output.WriteLine($"template 件数: {_templateManager.GetTemplates().Count}");
         output.WriteLine($"memory 件数: {_memoryStore.EntryCount}");
-        output.WriteLine($"利用可能 tool (main): {FormatTools(_toolCatalog.GetEnabledToolNames(AgentToolConsumer.MainAgent))}");
-        output.WriteLine($"利用可能 tool (sub-agent): {FormatTools(_toolCatalog.GetEnabledToolNames(AgentToolConsumer.SubAgent))}");
+        output.WriteLine($"利用可能 tool (current agent): {FormatTools(_toolCatalog.GetEnabledToolNames(_agentSelection.CurrentTools, AgentToolConsumer.MainAgent))}");
+        output.WriteLine($"利用可能 tool (current sub-agent): {FormatTools(_toolCatalog.GetEnabledToolNames(_agentSelection.CurrentTools, AgentToolConsumer.SubAgent))}");
         output.WriteLine($"現在の thread: {_threadSessionManager.CurrentThreadId ?? "(未作成/無効)"}");
         output.WriteLine($"template 定義ファイル: {_templatesPath}");
         output.WriteLine($"agent 定義ファイル: {_agentCatalog.SourcePath}");

@@ -43,7 +43,10 @@ public sealed class PlaceholderExpansionTests : IDisposable
             """
             {
               "agents": {
-                "coder": "Use this environment:\n%SYSTEM_INFO%"
+                "coder": {
+                  "prompt": "Use this environment:\n%SYSTEM_INFO%",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
@@ -68,7 +71,10 @@ public sealed class PlaceholderExpansionTests : IDisposable
             """
             {
               "agents": {
-                "coder": "Use this directory snapshot:\n%CURRENT_DIRECTORY_ENTRIES%"
+                "coder": {
+                  "prompt": "Use this directory snapshot:\n%CURRENT_DIRECTORY_ENTRIES%",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
@@ -98,8 +104,14 @@ public sealed class PlaceholderExpansionTests : IDisposable
             """
             {
               "agents": {
-                "base": "Base prompt.\n%SYSTEM_INFO%",
-                "coder": "%base%\nWrite code carefully."
+                "base": {
+                  "prompt": "Base prompt.\n%SYSTEM_INFO%",
+                  "tools": []
+                },
+                "coder": {
+                  "prompt": "%base%\nWrite code carefully.",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
@@ -125,8 +137,14 @@ public sealed class PlaceholderExpansionTests : IDisposable
                 "systemPromptPrefix": "Shared guidance.\n%SYSTEM_INFO%"
               },
               "agents": {
-                "default": "Be concise.",
-                "coder": "Write code carefully."
+                "default": {
+                  "prompt": "Be concise.",
+                  "tools": ["memory"]
+                },
+                "coder": {
+                  "prompt": "Write code carefully.",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
@@ -153,8 +171,14 @@ public sealed class PlaceholderExpansionTests : IDisposable
                 "systemPromptPrefix": "Shared guidance."
               },
               "agents": {
-                "base": "Base prompt.",
-                "coder": "%base%\nWrite code carefully."
+                "base": {
+                  "prompt": "Base prompt.",
+                  "tools": []
+                },
+                "coder": {
+                  "prompt": "%base%\nWrite code carefully.",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
@@ -169,6 +193,30 @@ public sealed class PlaceholderExpansionTests : IDisposable
     }
 
     [Fact]
+    public void AgentCatalog_PreservesConfiguredTools()
+    {
+        var agentsPath = Path.Combine(_tempRoot, "agents-tools.json");
+        File.WriteAllText(
+            agentsPath,
+            """
+            {
+              "agents": {
+                "coder": {
+                  "prompt": "Write code carefully.",
+                  "tools": ["memory", "read_file", "memory"]
+                }
+              }
+            }
+            """);
+        var catalog = new AgentCatalog(agentsPath);
+
+        Assert.True(catalog.TryGetAgent("coder", out var agent));
+        Assert.Equal(
+            [MemoryTools.BaseToolName, FileReadTools.BaseToolName],
+            agent.EnabledTools.OrderBy(name => name, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void AgentCatalog_LeavesUnknownPlaceholdersUnchanged()
     {
         var agentsPath = Path.Combine(_tempRoot, "agents-unknown.json");
@@ -177,7 +225,10 @@ public sealed class PlaceholderExpansionTests : IDisposable
             """
             {
               "agents": {
-                "coder": "Keep %UNKNOWN% literal."
+                "coder": {
+                  "prompt": "Keep %UNKNOWN% literal.",
+                  "tools": []
+                }
               }
             }
             """);
@@ -198,7 +249,10 @@ public sealed class PlaceholderExpansionTests : IDisposable
             """
             {
               "agents": {
-                "coder": "Before %SYSTEM_INFO%"
+                "coder": {
+                  "prompt": "Before %SYSTEM_INFO%",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
@@ -211,7 +265,10 @@ public sealed class PlaceholderExpansionTests : IDisposable
             """
             {
               "agents": {
-                "coder": "After %SYSTEM_INFO%"
+                "coder": {
+                  "prompt": "After %SYSTEM_INFO%",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
@@ -234,7 +291,10 @@ public sealed class PlaceholderExpansionTests : IDisposable
                 "systemPromptPrefix": "Before"
               },
               "agents": {
-                "coder": "Write code carefully."
+                "coder": {
+                  "prompt": "Write code carefully.",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
@@ -248,7 +308,10 @@ public sealed class PlaceholderExpansionTests : IDisposable
                 "systemPromptPrefix": "After"
               },
               "agents": {
-                "coder": "Write code carefully."
+                "coder": {
+                  "prompt": "Write code carefully.",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);

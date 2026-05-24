@@ -9,7 +9,7 @@ namespace AiChatCLI;
 public partial class SubAgentTools
 {
     /// <summary>
-    /// Tool name used in <c>Tools:Enabled</c> and tool registration.
+    /// Tool name used in <c>agents.json</c> agent tool lists and tool registration.
     /// </summary>
     public const string FunctionName = "sub_agent";
 

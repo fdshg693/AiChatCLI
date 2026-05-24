@@ -12,7 +12,7 @@ namespace AiChatCLI;
 public partial class FileReadTools
 {
     /// <summary>
-    /// Base tool name used in <c>Tools:Enabled</c>.
+    /// Tool name used in <c>agents.json</c> agent tool lists.
     /// </summary>
     public const string BaseToolName = "read_file";
 

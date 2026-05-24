@@ -30,7 +30,7 @@ dotnet test AiChatCLI.sln
 README 本体は入口に絞り、詳細は目的別ドキュメントへ分割しています。
 
 - [`docs/usage.md`](docs/usage.md): コマンド利用者向けの基本操作、slash command、template、agent、thread
-- [`docs/configuration.md`](docs/configuration.md): `appsettings.local.json`、環境変数、`Tools:Enabled`、ログ保存先、各種設定ファイル
+- [`docs/configuration.md`](docs/configuration.md): `appsettings.local.json`、環境変数、agent ごとの tool 定義、ログ保存先、各種設定ファイル
 - [`docs/development.md`](docs/development.md): 内部構成、責務分割、拡張ポイント、テスト方針
 - [`docs/reference.md`](docs/reference.md): コマンド一覧、agent-callable tool 一覧、ログ出力先、主要設定キーの早見表
 

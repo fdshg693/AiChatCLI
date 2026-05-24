@@ -41,7 +41,11 @@ internal sealed class ThreadSessionManager : IDisposable
             return;
 
         var threadId = _repository.CreateThread(_modelName, _agentSelection.CurrentName, _agentSelection.CurrentPrompt);
-        _chatService.RestoreConversation(_agentSelection.CurrentName, _agentSelection.CurrentPrompt, []);
+        _chatService.RestoreConversation(
+            _agentSelection.CurrentName,
+            _agentSelection.CurrentPrompt,
+            _agentSelection.CurrentTools,
+            []);
         CurrentThreadId = threadId;
         _recorder!.RecordSessionAttached(
             threadId,
@@ -79,7 +83,11 @@ internal sealed class ThreadSessionManager : IDisposable
             var newThreadId = _repository!.CreateThread(_modelName, nextAgentName, nextSystemPrompt);
 
             DetachCurrent("thread_switch");
-            _chatService.RestoreConversation(nextAgentName, nextSystemPrompt, []);
+            _chatService.RestoreConversation(
+                nextAgentName,
+                nextSystemPrompt,
+                _agentSelection.CurrentTools,
+                []);
             CurrentThreadId = newThreadId;
             _recorder!.RecordSessionAttached(
                 newThreadId,
@@ -126,6 +134,7 @@ internal sealed class ThreadSessionManager : IDisposable
             _chatService.RestoreConversation(
                 snapshot.CurrentAgentName,
                 snapshot.CurrentSystemPrompt,
+                _agentSelection.CurrentTools,
                 snapshot.Conversation);
             CurrentThreadId = snapshot.ThreadId;
             _recorder!.RecordSessionAttached(

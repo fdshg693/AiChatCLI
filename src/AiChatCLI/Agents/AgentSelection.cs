@@ -3,6 +3,8 @@ namespace AiChatCLI;
 internal sealed class AgentSelection
 {
     private readonly AgentCatalog _catalog;
+    private static readonly IReadOnlySet<string> EmptyTools =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     public AgentSelection(AgentCatalog catalog)
     {
@@ -14,33 +16,51 @@ internal sealed class AgentSelection
 
     public string CurrentPrompt { get; private set; } = "You are a helpful assistant.";
 
+    public IReadOnlySet<string> CurrentTools { get; private set; } = EmptyTools;
+
     public bool TrySelect(string name)
     {
-        if (!_catalog.TryGetAgentPrompt(name, out var prompt))
+        if (!_catalog.TryGetAgent(name, out var definition))
             return false;
 
         CurrentName = name;
-        CurrentPrompt = prompt;
+        CurrentPrompt = definition.Prompt;
+        CurrentTools = definition.EnabledTools;
         return true;
     }
 
-    public void SetCurrent(string name, string prompt)
+    public void SetCurrent(string name, string prompt, IReadOnlySet<string>? enabledTools = null)
     {
         CurrentName = string.IsNullOrWhiteSpace(name) ? "default" : name.Trim();
         CurrentPrompt = prompt ?? string.Empty;
+        CurrentTools = enabledTools ?? ResolveTools(CurrentName);
     }
 
     public void EnsureCurrentSelection()
     {
-        if (_catalog.TryGetAgentPrompt(CurrentName, out var prompt))
+        if (_catalog.TryGetAgent(CurrentName, out var definition))
         {
-            CurrentPrompt = prompt;
+            CurrentPrompt = definition.Prompt;
+            CurrentTools = definition.EnabledTools;
             return;
         }
 
         CurrentName = "default";
-        CurrentPrompt = _catalog.TryGetAgentPrompt(CurrentName, out var defaultPrompt)
-            ? defaultPrompt
-            : "You are a helpful assistant.";
+        if (_catalog.TryGetAgent(CurrentName, out var defaultDefinition))
+        {
+            CurrentPrompt = defaultDefinition.Prompt;
+            CurrentTools = defaultDefinition.EnabledTools;
+            return;
+        }
+
+        CurrentPrompt = "You are a helpful assistant.";
+        CurrentTools = EmptyTools;
+    }
+
+    private IReadOnlySet<string> ResolveTools(string agentName)
+    {
+        return _catalog.TryGetAgent(agentName, out var definition)
+            ? definition.EnabledTools
+            : EmptyTools;
     }
 }

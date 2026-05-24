@@ -44,18 +44,28 @@ internal sealed class AppComposition : IDisposable
                 AgentBuiltInPlaceholders.CreateResolver(sessionWorkingDirectory),
                 config.MaxTemplateDepth);
             var agentSelection = new AgentSelection(agentCatalog);
+            ValidateConfiguredAgentTools(agentCatalog);
             var memoryStore = new MemoryStore(config.MemoryPath);
             var memoryTools = new MemoryTools(memoryStore);
             var fileReadTools = new FileReadTools(sessionWorkingDirectory, new TextFileReader());
             var commandTools = new CommandTools(
                 new ConsoleCommandApprovalPrompt(),
                 new LocalCommandExecutor());
-            var toolCatalog = new AgentToolCatalog(config.EnabledBaseTools);
+            var toolCatalog = new AgentToolCatalog();
             toolCatalog.RegisterMemoryTool(memoryTools);
             toolCatalog.RegisterFileReadTool(fileReadTools);
             toolCatalog.RegisterCommandTool(commandTools);
-            if (config.EnabledBaseTools.Contains(TavilySearchTools.BaseToolName))
+            var searchToolEnabled = agentCatalog
+                .GetAgents()
+                .Any(agent => agent.Value.EnabledTools.Contains(TavilySearchTools.BaseToolName));
+            if (searchToolEnabled)
             {
+                if (string.IsNullOrWhiteSpace(config.TavilyApiKey))
+                {
+                    throw new InvalidOperationException(
+                        $"search ツールを有効にするには {AppPaths.DefaultLocalAppSettingsFileName} の Tavily:ApiKey または環境変数 TAVILY_API_KEY を設定してください。");
+                }
+
                 searchHttpClient = new HttpClient();
                 toolCatalog.RegisterSearchTool(new TavilySearchTools(
                     new TavilySearchClient(config.TavilyApiKey!, searchHttpClient)));
@@ -71,7 +81,10 @@ internal sealed class AppComposition : IDisposable
                 ? ThreadRepository.CreateSubAgentRepository(config.SubAgentThreadsDirectoryPath)
                 : null;
             var subAgentRunner = new SubAgentRunner(
-                () => agentFactory.CreateSubAgent(SubAgentRunner.AgentName, SubAgentRunner.SystemPrompt),
+                () => agentFactory.CreateSubAgent(
+                    SubAgentRunner.AgentName,
+                    SubAgentRunner.SystemPrompt,
+                    agentSelection.CurrentTools),
                 turnExecutor,
                 conversationCodec,
                 subAgentRepository,
@@ -82,7 +95,8 @@ internal sealed class AppComposition : IDisposable
                 conversationCodec,
                 turnExecutor,
                 agentSelection.CurrentName,
-                agentSelection.CurrentPrompt);
+                agentSelection.CurrentPrompt,
+                agentSelection.CurrentTools);
             var templateManager = new PromptTemplateManager(config.PromptsPath);
             var templateProcessor = new PromptTemplateProcessor(templateManager, config.MaxTemplateDepth);
             var promptReader = new InteractivePromptReader(templateManager);
@@ -157,5 +171,18 @@ internal sealed class AppComposition : IDisposable
         _threadSessionManager.Dispose();
         _searchHttpClient?.Dispose();
         _disposed = true;
+    }
+
+    private static void ValidateConfiguredAgentTools(AgentCatalog agentCatalog)
+    {
+        foreach (var (agentName, definition) in agentCatalog.GetAgents())
+        {
+            var unknownTools = AgentToolCatalog.FindUnknownToolNames(definition.EnabledTools);
+            if (unknownTools.Count == 0)
+                continue;
+
+            throw new InvalidOperationException(
+                $"agents.json の agents.{agentName}.tools に未対応の tool 名があります: {string.Join(", ", unknownTools)}");
+        }
     }
 }

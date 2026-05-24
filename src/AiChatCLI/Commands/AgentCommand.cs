@@ -76,10 +76,11 @@ internal sealed class AgentCommand : ISlashCommand
     {
         var agents = _agentCatalog.GetAgents();
         output.WriteLine("--- エージェント一覧 ---");
-        foreach (var (key, value) in agents.OrderBy(agent => agent.Key, StringComparer.Ordinal))
+        foreach (var (key, definition) in agents.OrderBy(agent => agent.Key, StringComparer.Ordinal))
         {
             var marker = key == _agentSelection.CurrentName ? " [現在]" : "";
-            output.WriteLine($"  {key}{marker} : {value}");
+            output.WriteLine($"  {key}{marker} : {definition.Prompt}");
+            output.WriteLine($"    tools: {FormatTools(definition.EnabledTools)}");
         }
 
         output.WriteLine("------------------------");
@@ -100,7 +101,7 @@ internal sealed class AgentCommand : ISlashCommand
             return;
         }
 
-        if (!_agentCatalog.TryGetAgentPrompt(name, out var prompt))
+        if (!_agentCatalog.TryGetAgent(name, out var definition))
         {
             output.WriteLine($"'{name}' は登録されていません。");
             return;
@@ -108,7 +109,8 @@ internal sealed class AgentCommand : ISlashCommand
 
         var marker = name == _agentSelection.CurrentName ? " [現在]" : "";
         output.WriteLine($"{name}{marker}");
-        output.WriteLine(prompt);
+        output.WriteLine($"tools: {FormatTools(definition.EnabledTools)}");
+        output.WriteLine(definition.Prompt);
     }
 
     private void UseAgent(string[] args, TextWriter output)
@@ -132,7 +134,7 @@ internal sealed class AgentCommand : ISlashCommand
             return;
         }
 
-        _chatService.SetAgent(_agentSelection.CurrentName, _agentSelection.CurrentPrompt);
+        _chatService.SetAgent(_agentSelection.CurrentName, _agentSelection.CurrentPrompt, _agentSelection.CurrentTools);
         _threadSessionManager.RecordAgentChange("agent_use");
         output.WriteLine($"エージェントを '{name}' に切り替えました。");
     }
@@ -146,8 +148,11 @@ internal sealed class AgentCommand : ISlashCommand
         }
 
         _agentSelection.EnsureCurrentSelection();
-        _chatService.SetAgent(_agentSelection.CurrentName, _agentSelection.CurrentPrompt);
+        _chatService.SetAgent(_agentSelection.CurrentName, _agentSelection.CurrentPrompt, _agentSelection.CurrentTools);
         _threadSessionManager.RecordAgentChange("agent_reload");
         output.WriteLine($"{Path.GetFileName(_agentCatalog.SourcePath)} をエージェント定義として再読み込みしました。");
     }
+
+    private static string FormatTools(IReadOnlySet<string> tools) =>
+        tools.Count == 0 ? "(なし)" : string.Join(", ", tools.OrderBy(name => name, StringComparer.OrdinalIgnoreCase));
 }

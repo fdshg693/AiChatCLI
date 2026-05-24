@@ -4,13 +4,19 @@ namespace AiChatCLI;
 
 internal sealed class AgentToolCatalog
 {
-    private readonly HashSet<string> _enabledBaseTools;
     private readonly List<AgentToolDescriptor> _tools = [];
+    private static readonly HashSet<string> KnownToolNamesSet =
+        new(
+            [
+                MemoryTools.BaseToolName,
+                SubAgentTools.FunctionName,
+                TavilySearchTools.BaseToolName,
+                FileReadTools.BaseToolName,
+                CommandTools.BaseToolName
+            ],
+            StringComparer.OrdinalIgnoreCase);
 
-    public AgentToolCatalog(IReadOnlySet<string> enabledBaseTools)
-    {
-        _enabledBaseTools = new HashSet<string>(enabledBaseTools, StringComparer.OrdinalIgnoreCase);
-    }
+    public static IReadOnlyCollection<string> KnownToolNames => KnownToolNamesSet;
 
     public void RegisterMemoryTool(MemoryTools memoryTools)
     {
@@ -60,18 +66,20 @@ internal sealed class AgentToolCatalog
             AgentToolScope.MainAndSubAgent));
     }
 
-    public IReadOnlyList<string> GetEnabledToolNames(AgentToolConsumer consumer) =>
-        GetEnabledTools(consumer)
+    public IReadOnlyList<string> GetEnabledToolNames(
+        IReadOnlySet<string> enabledToolNames,
+        AgentToolConsumer consumer) =>
+        GetEnabledTools(enabledToolNames, consumer)
             .Select(tool => tool.Name)
             .ToArray();
 
     public (IReadOnlyList<FunctionContract> Functions, Dictionary<string, Func<string, Task<string>>> FunctionMap)
-        GetBindings(AgentToolConsumer consumer)
+        GetBindings(IReadOnlySet<string> enabledToolNames, AgentToolConsumer consumer)
     {
         var functions = new List<FunctionContract>();
         var functionMap = new Dictionary<string, Func<string, Task<string>>>(StringComparer.Ordinal);
 
-        foreach (var tool in GetEnabledTools(consumer))
+        foreach (var tool in GetEnabledTools(enabledToolNames, consumer))
         {
             functions.Add(tool.Contract);
             functionMap[tool.Contract.Name] = tool.InvokeAsync;
@@ -80,15 +88,22 @@ internal sealed class AgentToolCatalog
         return (functions, functionMap);
     }
 
-    private IReadOnlyList<AgentToolDescriptor> GetEnabledTools(AgentToolConsumer consumer) =>
+    public static IReadOnlyList<string> FindUnknownToolNames(IEnumerable<string> toolNames) =>
+        toolNames
+            .Where(toolName => !KnownToolNamesSet.Contains(toolName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private IReadOnlyList<AgentToolDescriptor> GetEnabledTools(
+        IReadOnlySet<string> enabledToolNames,
+        AgentToolConsumer consumer) =>
         _tools
-            .Where(tool => IsBaseToolEnabled(tool.Name) && IsAvailableForConsumer(tool, consumer))
+            .Where(tool => enabledToolNames.Contains(tool.Name) && IsAvailableForConsumer(tool, consumer))
             .ToArray();
 
     private static bool IsAvailableForConsumer(AgentToolDescriptor tool, AgentToolConsumer consumer) =>
         consumer == AgentToolConsumer.MainAgent || tool.Scope == AgentToolScope.MainAndSubAgent;
-
-    private bool IsBaseToolEnabled(string toolName) => _enabledBaseTools.Contains(toolName);
 
     private void Register(AgentToolDescriptor descriptor)
     {

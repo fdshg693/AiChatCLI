@@ -15,22 +15,27 @@ internal sealed class OpenAIChatService : IChatService
         ConversationCodec conversationCodec,
         IAgentTurnExecutor turnExecutor,
         string agentName,
-        string systemPrompt)
+        string systemPrompt,
+        IReadOnlySet<string> enabledTools)
     {
         _agentFactory = agentFactory;
         _conversationCodec = conversationCodec;
         _turnExecutor = turnExecutor;
-        _agent = _agentFactory.CreateMainAgent(agentName, systemPrompt);
+        _agent = _agentFactory.CreateMainAgent(agentName, systemPrompt, enabledTools);
     }
 
-    public void SetAgent(string agentName, string systemPrompt)
+    public void SetAgent(string agentName, string systemPrompt, IReadOnlySet<string> enabledTools)
     {
-        ResetAgent(agentName, systemPrompt);
+        ResetAgent(agentName, systemPrompt, enabledTools);
     }
 
-    public void RestoreConversation(string agentName, string systemPrompt, IReadOnlyList<ThreadMessageRecord> conversation)
+    public void RestoreConversation(
+        string agentName,
+        string systemPrompt,
+        IReadOnlySet<string> enabledTools,
+        IReadOnlyList<ThreadMessageRecord> conversation)
     {
-        ResetAgent(agentName, systemPrompt);
+        ResetAgent(agentName, systemPrompt, enabledTools);
         _conversationHistory.Clear();
 
         foreach (var message in conversation)
@@ -51,8 +56,8 @@ internal sealed class OpenAIChatService : IChatService
         return execution.TurnResult;
     }
 
-    private void ResetAgent(string agentName, string systemPrompt)
+    private void ResetAgent(string agentName, string systemPrompt, IReadOnlySet<string> enabledTools)
     {
-        _agent = _agentFactory.CreateMainAgent(agentName, systemPrompt);
+        _agent = _agentFactory.CreateMainAgent(agentName, systemPrompt, enabledTools);
     }
 }

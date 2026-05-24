@@ -30,7 +30,7 @@ alwaysApply: false
 ## Agents And Tools
 
 - Agent-callable tool availability is centralized in `AgentToolCatalog`.
-- `Tools:Enabled` controls which base tools are adopted. Consumer-specific exposure stays in code through tool scope rules.
+- Each agent's `tools` array in `agents.json` controls which registered tools are exposed. Consumer-specific exposure stays in code through tool scope rules.
 - Keep `/status`, tool registration, and actual agent bindings driven by the same catalog so the visible tool list matches reality.
 - `OpenAIAgentFactory` builds main-agent and sub-agent bindings. Sub-agents must never expose `sub_agent`.
 - `SubAgentRunner` is responsible for isolated sub-agent execution and sub-agent thread logs. Keep parent-thread and sub-agent-thread behaviors aligned where intended, but keep contexts isolated.

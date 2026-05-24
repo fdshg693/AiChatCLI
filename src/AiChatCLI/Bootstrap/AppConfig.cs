@@ -15,7 +15,6 @@ internal class AppConfig
     public string ChatHistoryDirectoryPath { get; }
     public string ThreadsDirectoryPath { get; }
     public string SubAgentThreadsDirectoryPath { get; }
-    public IReadOnlySet<string> EnabledBaseTools { get; }
 
     public AppConfig(AppPaths paths)
     {
@@ -59,9 +58,6 @@ internal class AppConfig
         SubAgentThreadsDirectoryPath = configuredSubAgentThreadsDirectory is null
             ? Path.GetFullPath(Path.Combine(ThreadsDirectoryPath, AppPaths.DefaultSubAgentThreadsDirectoryName))
             : paths.ResolvePath(configuredSubAgentThreadsDirectory);
-
-        EnabledBaseTools = ReadEnabledBaseTools(config);
-        ValidateToolConfiguration();
     }
 
     private static string? ReadTrimmedValue(IConfiguration config, string key)
@@ -70,33 +66,4 @@ internal class AppConfig
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
-    private static IReadOnlySet<string> ReadEnabledBaseTools(IConfiguration config)
-    {
-        var configuredTools = config
-            .GetSection("Tools:Enabled")
-            .GetChildren()
-            .Select(section => section.Value?.Trim())
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Cast<string>();
-
-        var tools = new HashSet<string>(configuredTools, StringComparer.OrdinalIgnoreCase);
-        if (tools.Count > 0)
-            return tools;
-
-        return new HashSet<string>(
-            [MemoryTools.BaseToolName, SubAgentTools.FunctionName, CommandTools.BaseToolName, FileReadTools.BaseToolName],
-            StringComparer.OrdinalIgnoreCase);
-    }
-
-    private void ValidateToolConfiguration()
-    {
-        if (!EnabledBaseTools.Contains(TavilySearchTools.BaseToolName))
-            return;
-
-        if (!string.IsNullOrWhiteSpace(TavilyApiKey))
-            return;
-
-        throw new InvalidOperationException(
-            $"search ツールを有効にするには {AppPaths.DefaultLocalAppSettingsFileName} の Tavily:ApiKey または環境変数 TAVILY_API_KEY を設定してください。");
-    }
 }

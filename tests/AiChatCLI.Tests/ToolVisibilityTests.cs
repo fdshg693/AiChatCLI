@@ -18,7 +18,7 @@ public sealed class ToolVisibilityTests : IDisposable
     }
 
     [Fact]
-    public void AppConfig_DefaultsEnabledBaseToolsWhenUnset()
+    public void AppConfig_UsesDefaultPathsWhenUnset()
     {
         var repoRoot = CreateRepoRoot("default-config");
         File.WriteAllText(
@@ -34,38 +34,12 @@ public sealed class ToolVisibilityTests : IDisposable
         var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
         var config = new AppConfig(paths);
 
-        Assert.Equal(
-            [CommandTools.BaseToolName, MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName],
-            config.EnabledBaseTools.OrderBy(name => name, StringComparer.Ordinal));
         Assert.Equal(Path.Combine(repoRoot, "agents.json"), config.AgentsPath);
         Assert.Equal(Path.Combine(repoRoot, "prompts.json"), config.PromptsPath);
         Assert.Equal(Path.Combine(repoRoot, "memory.json"), config.MemoryPath);
         Assert.Equal(Path.Combine(repoRoot, "logs"), config.ChatHistoryDirectoryPath);
         Assert.Equal(Path.Combine(repoRoot, "logs", "threads"), config.ThreadsDirectoryPath);
         Assert.Equal(Path.Combine(repoRoot, "logs", "threads", "subagents"), config.SubAgentThreadsDirectoryPath);
-    }
-
-    [Fact]
-    public void AppConfig_ReadsEnabledBaseToolsFromJsonArray()
-    {
-        var repoRoot = CreateRepoRoot("configured-tools");
-        File.WriteAllText(
-            Path.Combine(repoRoot, "appsettings.json"),
-            """
-            {
-              "OpenAI": {
-                "ApiKey": "test-key"
-              },
-              "Tools": {
-                "Enabled": ["memory"]
-              }
-            }
-            """);
-
-        var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
-        var config = new AppConfig(paths);
-
-        Assert.Equal([MemoryTools.BaseToolName], config.EnabledBaseTools);
     }
 
     [Fact]
@@ -163,117 +137,37 @@ public sealed class ToolVisibilityTests : IDisposable
     }
 
     [Fact]
-    public void AppConfig_ThrowsWhenSearchEnabledWithoutTavilyApiKey()
-    {
-        using var _ = new EnvironmentVariableScope("TAVILY_API_KEY", null);
-        var repoRoot = CreateRepoRoot("missing-tavily-key");
-        File.WriteAllText(
-            Path.Combine(repoRoot, "appsettings.json"),
-            """
-            {
-              "OpenAI": {
-                "ApiKey": "test-key"
-              },
-              "Tools": {
-                "Enabled": ["memory", "sub_agent", "search"]
-              }
-            }
-            """);
-
-        var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
-
-        var ex = Assert.Throws<InvalidOperationException>(() => new AppConfig(paths));
-        Assert.Contains("Tavily:ApiKey", ex.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void AgentToolCatalog_RespectsBaseToolConfig()
+    public void AgentToolCatalog_FiltersConfiguredToolsForMainAndSubAgents()
     {
         var memoryStore = new MemoryStore(Path.Combine(_tempRoot, "memory.json"));
         var memoryTools = new MemoryTools(memoryStore);
-        var toolCatalog = new AgentToolCatalog(
-            new HashSet<string>([MemoryTools.BaseToolName], StringComparer.OrdinalIgnoreCase));
+        var toolCatalog = new AgentToolCatalog();
+        var enabledTools = new HashSet<string>(
+            [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName],
+            StringComparer.OrdinalIgnoreCase);
+
         toolCatalog.RegisterMemoryTool(memoryTools);
-        toolCatalog.RegisterSubAgentTool(CreateSubAgentTools());
-
-        Assert.Equal(
-            [MemoryTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.MainAgent));
-        Assert.Equal(
-            [MemoryTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.SubAgent));
-    }
-
-    [Fact]
-    public void AgentToolCatalog_HidesSubAgentToolForSubAgentConsumer()
-    {
-        var memoryStore = new MemoryStore(Path.Combine(_tempRoot, "memory2.json"));
-        var memoryTools = new MemoryTools(memoryStore);
-        var toolCatalog = new AgentToolCatalog(
-            new HashSet<string>([MemoryTools.BaseToolName, SubAgentTools.FunctionName], StringComparer.OrdinalIgnoreCase));
-        toolCatalog.RegisterMemoryTool(memoryTools);
-        toolCatalog.RegisterSubAgentTool(CreateSubAgentTools());
-
-        Assert.Equal(
-            [MemoryTools.BaseToolName, SubAgentTools.FunctionName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.MainAgent));
-        Assert.Equal(
-            [MemoryTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.SubAgent));
-    }
-
-    [Fact]
-    public void AgentToolCatalog_ExposesSearchToolToMainAndSubAgents()
-    {
-        var memoryStore = new MemoryStore(Path.Combine(_tempRoot, "memory3.json"));
-        var memoryTools = new MemoryTools(memoryStore);
-        var toolCatalog = new AgentToolCatalog(
-            new HashSet<string>(
-                [MemoryTools.BaseToolName, TavilySearchTools.BaseToolName],
-                StringComparer.OrdinalIgnoreCase));
-        toolCatalog.RegisterMemoryTool(memoryTools);
-        toolCatalog.RegisterSearchTool(CreateSearchTools());
-
-        Assert.Equal(
-            [MemoryTools.BaseToolName, TavilySearchTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.MainAgent));
-        Assert.Equal(
-            [MemoryTools.BaseToolName, TavilySearchTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.SubAgent));
-    }
-
-    [Fact]
-    public void AgentToolCatalog_ExposesCommandToolToMainAndSubAgents()
-    {
-        var toolCatalog = new AgentToolCatalog(
-            new HashSet<string>([CommandTools.BaseToolName], StringComparer.OrdinalIgnoreCase));
-        toolCatalog.RegisterCommandTool(CreateCommandTools());
-
-        Assert.Equal(
-            [CommandTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.MainAgent));
-        Assert.Equal(
-            [CommandTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.SubAgent));
-    }
-
-    [Fact]
-    public void AgentToolCatalog_ExposesFileReadToolToMainAndSubAgents()
-    {
-        var toolCatalog = new AgentToolCatalog(
-            new HashSet<string>([FileReadTools.BaseToolName], StringComparer.OrdinalIgnoreCase));
         toolCatalog.RegisterFileReadTool(CreateFileReadTools());
+        toolCatalog.RegisterSubAgentTool(CreateSubAgentTools());
 
         Assert.Equal(
-            [FileReadTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.MainAgent));
+            [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName],
+            toolCatalog.GetEnabledToolNames(enabledTools, AgentToolConsumer.MainAgent));
         Assert.Equal(
-            [FileReadTools.BaseToolName],
-            toolCatalog.GetEnabledToolNames(AgentToolConsumer.SubAgent));
+            [MemoryTools.BaseToolName, FileReadTools.BaseToolName],
+            toolCatalog.GetEnabledToolNames(enabledTools, AgentToolConsumer.SubAgent));
     }
 
     [Fact]
-    public void StatusCommand_ListsEnabledToolNamesForMainAndSubAgents()
+    public void AgentToolCatalog_FindsUnknownToolNames()
+    {
+        var unknownTools = AgentToolCatalog.FindUnknownToolNames(["memory", "mystery_tool", "another_tool"]);
+
+        Assert.Equal(["another_tool", "mystery_tool"], unknownTools);
+    }
+
+    [Fact]
+    public void StatusCommand_ListsCurrentAgentAndSubAgentToolNames()
     {
         var repoRoot = CreateRepoRoot("status-command");
         var promptsPath = Path.Combine(repoRoot, "prompts.json");
@@ -285,17 +179,20 @@ public sealed class ToolVisibilityTests : IDisposable
                 "systemPromptPrefix": "Shared guidance."
               },
               "agents": {
-                "default": "You are a helpful assistant.",
-                "coder": "Write code carefully."
+                "default": {
+                  "prompt": "You are a helpful assistant.",
+                  "tools": ["memory", "sub_agent", "read_file"]
+                },
+                "coder": {
+                  "prompt": "Write code carefully.",
+                  "tools": ["read_file"]
+                }
               }
             }
             """);
         var memoryStore = new MemoryStore(Path.Combine(repoRoot, "memory.json"));
         var memoryTools = new MemoryTools(memoryStore);
-        var toolCatalog = new AgentToolCatalog(
-            new HashSet<string>(
-                [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName],
-                StringComparer.OrdinalIgnoreCase));
+        var toolCatalog = new AgentToolCatalog();
         toolCatalog.RegisterMemoryTool(memoryTools);
         toolCatalog.RegisterFileReadTool(CreateFileReadTools());
         toolCatalog.RegisterSubAgentTool(CreateSubAgentTools());
@@ -325,11 +222,11 @@ public sealed class ToolVisibilityTests : IDisposable
 
         var text = output.ToString();
         Assert.Contains(
-            $"利用可能 tool (main): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}, {SubAgentTools.FunctionName}",
+            $"利用可能 tool (current agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}, {SubAgentTools.FunctionName}",
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            $"利用可能 tool (sub-agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}",
+            $"利用可能 tool (current sub-agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}",
             text,
             StringComparison.Ordinal);
         Assert.Contains("agent 件数: 2", text, StringComparison.Ordinal);
@@ -363,22 +260,6 @@ public sealed class ToolVisibilityTests : IDisposable
         return new SubAgentTools(runner);
     }
 
-    private static TavilySearchTools CreateSearchTools()
-    {
-        var client = new TavilySearchClient(
-            "tvly-test-key",
-            new HttpClient(new StubHttpMessageHandler("""
-            {
-              "query": "test",
-              "results": [],
-              "response_time": 0.1,
-              "request_id": "req_test"
-            }
-            """)));
-
-        return new TavilySearchTools(client);
-    }
-
     private static CommandTools CreateCommandTools() =>
         new(new StubCommandApprovalPrompt(), new StubCommandExecutor());
 
@@ -390,11 +271,15 @@ public sealed class ToolVisibilityTests : IDisposable
         public Task<ChatTurnResult> SendAsync(string message) =>
             Task.FromResult(new ChatTurnResult(string.Empty, [], []));
 
-        public void SetAgent(string agentName, string systemPrompt)
+        public void SetAgent(string agentName, string systemPrompt, IReadOnlySet<string> enabledTools)
         {
         }
 
-        public void RestoreConversation(string agentName, string systemPrompt, IReadOnlyList<ThreadMessageRecord> conversation)
+        public void RestoreConversation(
+            string agentName,
+            string systemPrompt,
+            IReadOnlySet<string> enabledTools,
+            IReadOnlyList<ThreadMessageRecord> conversation)
         {
         }
     }
@@ -410,15 +295,6 @@ public sealed class ToolVisibilityTests : IDisposable
 
             return Task.FromResult(new AgentTurnExecution(turnResult, turnHistory));
         }
-    }
-
-    private sealed class StubHttpMessageHandler(string responseBody) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(responseBody)
-            });
     }
 
     private sealed class StubCommandApprovalPrompt : ICommandApprovalPrompt
