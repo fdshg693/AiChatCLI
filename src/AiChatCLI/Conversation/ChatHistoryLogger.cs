@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 
 namespace AiChatCLI;
@@ -148,7 +147,7 @@ internal sealed class ChatHistoryLogger : IDisposable
     private static StreamWriter CreateLogWriter(string path) =>
         new(
             new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read),
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
+            TextEncodingDefaults.Utf8NoBom)
         {
             AutoFlush = true
         };

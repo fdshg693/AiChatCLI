@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -107,7 +106,7 @@ internal sealed class ThreadRepository
         var events = new List<ThreadEvent>();
         var lineNumber = 0;
 
-        foreach (var line in File.ReadLines(filePath, Encoding.UTF8))
+        foreach (var line in File.ReadLines(filePath, TextEncodingDefaults.Utf8NoBom))
         {
             lineNumber++;
             if (string.IsNullOrWhiteSpace(line))
@@ -128,7 +127,7 @@ internal sealed class ThreadRepository
         var serialized = JsonSerializer.Serialize(threadEvent, _jsonOptions);
 
         using var stream = new FileStream(filePath, fileMode, FileAccess.Write, FileShare.Read);
-        using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        using var writer = new StreamWriter(stream, TextEncodingDefaults.Utf8NoBom);
         writer.WriteLine(serialized);
     }
 

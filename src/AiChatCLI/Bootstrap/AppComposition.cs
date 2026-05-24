@@ -46,11 +46,14 @@ internal sealed class AppComposition : IDisposable
             var agentSelection = new AgentSelection(agentCatalog);
             var memoryStore = new MemoryStore(config.MemoryPath);
             var memoryTools = new MemoryTools(memoryStore);
+            var sessionWorkingDirectory = new SessionWorkingDirectory();
+            var fileReadTools = new FileReadTools(sessionWorkingDirectory, new TextFileReader());
             var commandTools = new CommandTools(
                 new ConsoleCommandApprovalPrompt(),
                 new LocalCommandExecutor());
             var toolCatalog = new AgentToolCatalog(config.EnabledBaseTools);
             toolCatalog.RegisterMemoryTool(memoryTools);
+            toolCatalog.RegisterFileReadTool(fileReadTools);
             toolCatalog.RegisterCommandTool(commandTools);
             if (config.EnabledBaseTools.Contains(TavilySearchTools.BaseToolName))
             {

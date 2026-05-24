@@ -88,7 +88,7 @@ internal class AppConfig
             return tools;
 
         return new HashSet<string>(
-            [MemoryTools.BaseToolName, SubAgentTools.FunctionName, CommandTools.BaseToolName],
+            [MemoryTools.BaseToolName, SubAgentTools.FunctionName, CommandTools.BaseToolName, FileReadTools.BaseToolName],
             StringComparer.OrdinalIgnoreCase);
     }
 

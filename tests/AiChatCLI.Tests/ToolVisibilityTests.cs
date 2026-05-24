@@ -35,7 +35,7 @@ public sealed class ToolVisibilityTests : IDisposable
         var config = new AppConfig(paths);
 
         Assert.Equal(
-            [CommandTools.BaseToolName, MemoryTools.BaseToolName, SubAgentTools.FunctionName],
+            [CommandTools.BaseToolName, MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName],
             config.EnabledBaseTools.OrderBy(name => name, StringComparer.Ordinal));
         Assert.Equal(Path.Combine(repoRoot, "agents.json"), config.AgentsPath);
         Assert.Equal(Path.Combine(repoRoot, "prompts.json"), config.PromptsPath);
@@ -260,6 +260,21 @@ public sealed class ToolVisibilityTests : IDisposable
     }
 
     [Fact]
+    public void AgentToolCatalog_ExposesFileReadToolToMainAndSubAgents()
+    {
+        var toolCatalog = new AgentToolCatalog(
+            new HashSet<string>([FileReadTools.BaseToolName], StringComparer.OrdinalIgnoreCase));
+        toolCatalog.RegisterFileReadTool(CreateFileReadTools());
+
+        Assert.Equal(
+            [FileReadTools.BaseToolName],
+            toolCatalog.GetEnabledToolNames(AgentToolConsumer.MainAgent));
+        Assert.Equal(
+            [FileReadTools.BaseToolName],
+            toolCatalog.GetEnabledToolNames(AgentToolConsumer.SubAgent));
+    }
+
+    [Fact]
     public void StatusCommand_ListsEnabledToolNamesForMainAndSubAgents()
     {
         var repoRoot = CreateRepoRoot("status-command");
@@ -267,8 +282,11 @@ public sealed class ToolVisibilityTests : IDisposable
         var memoryStore = new MemoryStore(Path.Combine(repoRoot, "memory.json"));
         var memoryTools = new MemoryTools(memoryStore);
         var toolCatalog = new AgentToolCatalog(
-            new HashSet<string>([MemoryTools.BaseToolName, SubAgentTools.FunctionName], StringComparer.OrdinalIgnoreCase));
+            new HashSet<string>(
+                [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName],
+                StringComparer.OrdinalIgnoreCase));
         toolCatalog.RegisterMemoryTool(memoryTools);
+        toolCatalog.RegisterFileReadTool(CreateFileReadTools());
         toolCatalog.RegisterSubAgentTool(CreateSubAgentTools());
 
         var agentCatalog = new AgentCatalog(Path.Combine(repoRoot, "agents.json"));
@@ -296,11 +314,11 @@ public sealed class ToolVisibilityTests : IDisposable
 
         var text = output.ToString();
         Assert.Contains(
-            $"利用可能 tool (main): {MemoryTools.BaseToolName}, {SubAgentTools.FunctionName}",
+            $"利用可能 tool (main): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}, {SubAgentTools.FunctionName}",
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            $"利用可能 tool (sub-agent): {MemoryTools.BaseToolName}",
+            $"利用可能 tool (sub-agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}",
             text,
             StringComparison.Ordinal);
         Assert.Contains($"template 定義ファイル: {promptsPath}", text, StringComparison.Ordinal);
@@ -351,6 +369,9 @@ public sealed class ToolVisibilityTests : IDisposable
 
     private static CommandTools CreateCommandTools() =>
         new(new StubCommandApprovalPrompt(), new StubCommandExecutor());
+
+    private static FileReadTools CreateFileReadTools() =>
+        new(new SessionWorkingDirectory(Path.GetTempPath()), new TextFileReader());
 
     private sealed class StubChatService : IChatService
     {

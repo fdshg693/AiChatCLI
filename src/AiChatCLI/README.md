@@ -182,6 +182,28 @@ AI> 承知しました。以後は日本語を基本に回答します。
 
 この種の継続的な好みは、モデルが必要だと判断すると memory 保存ファイルに保存され、次のやり取りでも参照できます。`/status` では保存ファイルの場所と件数を確認できます。
 
+## ファイル読み取りツール
+
+モデルは Function Calling の `read_file` ツールを使って、ローカルファイルをシェルコマンドなしで読み取れます。読み取り専用のツールなので、`command` ツールより狭い権限でファイル内容を参照できます。
+
+- `read_file` は既定で main agent / sub-agent の両方へ公開されます
+- `path` には絶対パス、または CLI プロセスの現在作業ディレクトリからの相対パスを指定できます
+- `start_line` と `end_line` は 1-based / inclusive の行範囲です。`end_line` を省略または `0` にすると末尾まで読み取ります
+- 文字コードは BOM を判定し、BOM が無い場合は UTF-8 を優先します。UTF-8 として不正な場合は CP932 など Windows で使われる代表的なコードページへフォールバックします
+- 実行結果は `ok`、`status`、`path`、`resolvedPath`、`encoding`、`totalLines`、`startLine`、`endLine`、`content`、`error` などを含む JSON 文字列で返ります
+
+例:
+
+```json
+{
+  "path": "src/AiChatCLI/README.md",
+  "start_line": 1,
+  "end_line": 20
+}
+```
+
+ローカルファイル読み取りを無効にしたい場合は、`Tools:Enabled` から `read_file` を外してください。
+
 ## Search ツール
 
 Tavily Search API を使う `search` ツールを追加できます。`query` と `search_depth` を受け取り、関連度順の検索結果を JSON で返します。
@@ -271,7 +293,7 @@ NO の理由 (任意): 今はテストを走らせたくない
 | 会話ログの保存ディレクトリ | `Paths:ChatHistoryDirectory` | `logs` |
 | thread ログの保存ディレクトリ | `Paths:ThreadsDirectory` | 未設定時は `<ChatHistoryDirectory>/threads` |
 | sub-agent thread ログの保存ディレクトリ | `Paths:SubAgentThreadsDirectory` | 未設定時は `<ThreadsDirectory>/subagents` |
-| base tool の公開一覧 | `Tools:Enabled` | 未設定時は `memory`, `sub_agent`, `command` |
+| base tool の公開一覧 | `Tools:Enabled` | 未設定時は `memory`, `sub_agent`, `command`, `read_file` |
 
 例:
 
@@ -286,7 +308,7 @@ NO の理由 (任意): 今はテストを走らせたくない
     "SubAgentThreadsDirectory": "artifacts/threads/subagents"
   },
   "Tools": {
-    "Enabled": ["memory", "sub_agent", "command"]
+    "Enabled": ["memory", "sub_agent", "command", "read_file"]
   }
 }
 ```
@@ -299,19 +321,19 @@ NO の理由 (任意): 今はテストを走らせたくない
     "ApiKey": "tvly-your-tavily-api-key"
   },
   "Tools": {
-    "Enabled": ["memory", "sub_agent", "command", "search"]
+    "Enabled": ["memory", "sub_agent", "command", "read_file", "search"]
   }
 }
 ```
 
 `Tools:Enabled` は base tool の採用可否だけを決めます。たとえば `sub_agent` を含めても、sub-agent 側ではコード内ルールにより `sub_agent` は公開しません。
 
-環境変数では `Tools__Enabled__0=memory`、`Tools__Enabled__1=sub_agent`、`Tools__Enabled__2=command` のように `__` 区切りで同じ設定を上書きできます。
+環境変数では `Tools__Enabled__0=memory`、`Tools__Enabled__1=sub_agent`、`Tools__Enabled__2=command`、`Tools__Enabled__3=read_file` のように `__` 区切りで同じ設定を上書きできます。
 
 ## テスト
 
 - `tests/AiChatCLI.Tests/` に focused xUnit test を置いています
-- 現在は `AppConfig`、`AppPaths`、`AgentToolCatalog`、`CommandTools`、`ConversationCodec`、`SlashCommandHandler`、`StatusCommand`、`ThreadProjector`、`ThreadRepository`、`ThreadRecorder`、`SubAgentRunner` を対象に、base tool 設定・consumer ごとの tool 公開・path 解決・tool aggregate・slash command 出力・thread replay・サブエージェントログ・コマンド承認の回帰を確認しています
+- 現在は `AppConfig`、`AppPaths`、`AgentToolCatalog`、`CommandTools`、`FileReadTools`、`ConversationCodec`、`SlashCommandHandler`、`StatusCommand`、`ThreadProjector`、`ThreadRepository`、`ThreadRecorder`、`SubAgentRunner` を対象に、base tool 設定・consumer ごとの tool 公開・path 解決・tool aggregate・slash command 出力・thread replay・サブエージェントログ・コマンド承認・ファイル読み取りの回帰を確認しています
 
 ## ライブラリ
 

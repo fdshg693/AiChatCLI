@@ -12,6 +12,7 @@
     <PackageReference Include="AutoGen.SourceGenerator" Version="0.2.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.8" />
   </ItemGroup>
 
   <ItemGroup>

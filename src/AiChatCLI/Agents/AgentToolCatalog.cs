@@ -39,6 +39,15 @@ internal sealed class AgentToolCatalog
             AgentToolScope.MainAndSubAgent));
     }
 
+    public void RegisterFileReadTool(FileReadTools fileReadTools)
+    {
+        Register(new AgentToolDescriptor(
+            FileReadTools.BaseToolName,
+            fileReadTools.read_fileFunctionContract,
+            fileReadTools.read_fileWrapper,
+            AgentToolScope.MainAndSubAgent));
+    }
+
     /// <summary>
     /// Registers the approval-gated local command execution tool.
     /// </summary>

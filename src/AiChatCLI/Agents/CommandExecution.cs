@@ -16,8 +16,6 @@ internal sealed record CommandExecutionResult(
 
 internal sealed class LocalCommandExecutor : ICommandExecutor
 {
-    private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-
     public async Task<CommandExecutionResult> ExecuteAsync(string command, TimeSpan timeout)
     {
         using var process = new Process
@@ -63,8 +61,8 @@ internal sealed class LocalCommandExecutor : ICommandExecutor
         if (OperatingSystem.IsWindows())
         {
             startInfo.FileName = "powershell.exe";
-            startInfo.StandardOutputEncoding = Utf8NoBom;
-            startInfo.StandardErrorEncoding = Utf8NoBom;
+            startInfo.StandardOutputEncoding = TextEncodingDefaults.Utf8NoBom;
+            startInfo.StandardErrorEncoding = TextEncodingDefaults.Utf8NoBom;
             startInfo.ArgumentList.Add("-NoLogo");
             startInfo.ArgumentList.Add("-NoProfile");
             startInfo.ArgumentList.Add("-NonInteractive");

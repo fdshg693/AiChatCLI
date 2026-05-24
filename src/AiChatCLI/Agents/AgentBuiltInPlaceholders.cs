@@ -22,6 +22,7 @@ internal static class AgentBuiltInPlaceholders
             $"- OS: {RuntimeInformation.OSDescription}",
             $"- OS architecture: {RuntimeInformation.OSArchitecture}",
             $"- Process architecture: {RuntimeInformation.ProcessArchitecture}",
+            $"- File read tool: relative paths are resolved from the CLI process current directory; it detects BOMs, prefers UTF-8, and falls back to Windows code pages when needed.",
             $"- Command shell: {GetCommandShellDescription()}",
             $"- Command encoding: {GetCommandEncodingDescription()}"
         });
