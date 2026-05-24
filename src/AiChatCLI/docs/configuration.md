@@ -1,0 +1,190 @@
+# AiChatCLI Configuration Guide
+
+`AiChatCLI` の設定ファイル、環境変数、tool 有効化、ログ保存先をまとめたガイドです。日常利用の操作は [`usage.md`](usage.md)、一覧性を重視した要約は [`reference.md`](reference.md) を参照してください。
+
+## セットアップ
+
+1. `appsettings.local.example.json` を `appsettings.local.json` にコピーします
+2. `appsettings.local.json` の `OpenAI:ApiKey` に API キーを設定します
+3. Tavily 検索を使う場合は `Tavily:ApiKey` も設定します
+4. `appsettings.local.json` は `.gitignore` 済みで Git 管理しません
+
+```bash
+dotnet build
+dotnet run --project src/AiChatCLI/AiChatCLI.csproj
+```
+
+テスト:
+
+```bash
+dotnet test AiChatCLI.sln
+```
+
+## 設定の読み込み順
+
+設定は次の順で読み込まれ、後ろのものが前を上書きします。
+
+1. `appsettings.json`
+2. `appsettings.local.json`
+3. 環境変数
+
+代表例:
+
+- `OPENAI_API_KEY`
+- `TAVILY_API_KEY`
+- `ChatHistory__Enabled`
+- `Paths__ChatHistoryDirectory`
+- `Tools__Enabled__0=memory`
+
+## 主な設定項目
+
+| 項目 | 設定方法 | デフォルト値 |
+|---|---|---|
+| OpenAI API キー | `OpenAI:ApiKey` または `OPENAI_API_KEY` | 必須 |
+| Tavily API キー | `Tavily:ApiKey` または `TAVILY_API_KEY` | 未設定 |
+| モデル | `OpenAI:Model` | `gpt-4o-mini` |
+| テンプレート展開の最大深度 | `Template:MaxDepth` | `10` |
+| 会話ログの有効化 | `ChatHistory:Enabled` | `true` |
+| agent 定義ファイル | `Paths:Agents` | `agents.json` |
+| legacy system prompt 定義ファイル | `Paths:LegacySystemPrompts` | `system_prompts.json` |
+| テンプレート定義ファイル | `Paths:Prompts` | `prompts.json` |
+| メモリ保存ファイル | `Paths:Memory` | `memory.json` |
+| 会話ログの保存ディレクトリ | `Paths:ChatHistoryDirectory` | `logs` |
+| thread ログの保存ディレクトリ | `Paths:ThreadsDirectory` | 未設定時は `<ChatHistoryDirectory>/threads` |
+| sub-agent thread ログの保存ディレクトリ | `Paths:SubAgentThreadsDirectory` | 未設定時は `<ThreadsDirectory>/subagents` |
+| base tool の公開一覧 | `Tools:Enabled` | `memory`, `sub_agent`, `command`, `read_file` |
+
+## パス解決の考え方
+
+- `Paths:*` に相対パスを指定した場合は `appsettings.json` と同じ基準ディレクトリから解決されます
+- `ChatHistory:Directory` も互換性のため読み取りますが、`Paths:ChatHistoryDirectory` が優先されます
+- `ThreadsDirectory` が未設定なら `<ChatHistoryDirectory>/threads` を使います
+- `SubAgentThreadsDirectory` が未設定なら `<ThreadsDirectory>/subagents` を使います
+
+例:
+
+```json
+{
+  "Paths": {
+    "Agents": "config/agents.json",
+    "Prompts": "config/prompts.json",
+    "Memory": "state/memory.json",
+    "ChatHistoryDirectory": "artifacts/logs",
+    "ThreadsDirectory": "artifacts/threads",
+    "SubAgentThreadsDirectory": "artifacts/threads/subagents"
+  },
+  "Tools": {
+    "Enabled": ["memory", "sub_agent", "command", "read_file"]
+  }
+}
+```
+
+## tool の有効化
+
+`Tools:Enabled` は base tool の採用可否だけを決めます。たとえば `sub_agent` を含めても、sub-agent 側ではコード内ルールにより `sub_agent` は公開しません。
+
+環境変数でも同じ設定を上書きできます。
+
+```text
+Tools__Enabled__0=memory
+Tools__Enabled__1=sub_agent
+Tools__Enabled__2=command
+Tools__Enabled__3=read_file
+```
+
+### `memory`
+
+Function Calling を使って、設定された memory 保存ファイルに短い長期メモリを保存します。
+
+- 保存先は `Paths:Memory`
+- `key: value` 形式の JSON を使います
+- 主にユーザー設定、好み、継続中タスクの前提などの短い事実を保持します
+- モデルは `upsert` / `get` / `list` / `delete` を内部的に使い分けます
+- `Tools:Enabled` から `memory` を外すと公開しません
+
+### `read_file`
+
+ローカルファイルをシェルコマンドなしで読み取るための読み取り専用ツールです。
+
+- main agent / sub-agent の両方へ公開されます
+- `path` には絶対パス、または CLI プロセスの現在作業ディレクトリからの相対パスを指定できます
+- `start_line` と `end_line` は 1-based / inclusive です
+- `end_line` を省略または `0` にすると末尾まで読み取ります
+- BOM を判定し、BOM が無い場合は UTF-8 を優先しつつ、必要に応じて Windows 系コードページへフォールバックします
+- 結果は `ok`、`status`、`path`、`resolvedPath`、`encoding`、`totalLines`、`startLine`、`endLine`、`content`、`error` などを含む JSON 文字列です
+
+```json
+{
+  "path": "src/AiChatCLI/README.md",
+  "start_line": 1,
+  "end_line": 20
+}
+```
+
+### `search`
+
+Tavily Search API を使う opt-in の検索ツールです。
+
+- `Tools:Enabled` に `search` を含めたときだけ main agent / sub-agent の両方へ公開されます
+- API キーは `Tavily:ApiKey` または `TAVILY_API_KEY` で設定します
+- `search_depth` は `basic` が標準、`advanced` は高精度、`fast` / `ultra-fast` は低遅延向けです
+- `search` を有効にしたのに API キーが無い場合は、起動時に設定エラーで停止します
+
+```json
+{
+  "Tavily": {
+    "ApiKey": "tvly-your-tavily-api-key"
+  },
+  "Tools": {
+    "Enabled": ["memory", "sub_agent", "command", "read_file", "search"]
+  }
+}
+```
+
+### `command`
+
+ローカルシェルコマンドの実行を要求できる approval-gated なツールです。
+
+- main agent / sub-agent の両方へ公開されます
+- Windows では PowerShell、その他の OS では `/bin/sh -lc` で実行します
+- Windows では stdout/stderr を UTF-8 にそろえるため、日本語などの Unicode 出力も崩れにくくしています
+- `timeout_seconds` は既定で `120` 秒、最大 `600` 秒です
+- 実行前に必ずコンソールへコマンドが表示され、ユーザーが `YES` と入力した場合だけ実行されます
+- `NO` の場合は `status: "denied"` と `denied: true` を含む JSON が AI に返ります
+- `NO` の理由を入力した場合だけ、その理由が `reason` として AI に渡されます
+
+```text
+AI がコマンド実行を要求しています:
+dotnet test AiChatCLI.sln
+実行しますか? YES/NO: NO
+NO の理由 (任意): 今はテストを走らせたくない
+```
+
+### `sub_agent`
+
+現在の会話履歴を持たない新しいサブエージェントに作業を委譲します。
+
+- `prompt` だけを user message としてサブエージェントを実行します
+- サブエージェントは `Paths:Memory` の memory tool を利用できます
+- サブエージェント側の利用可能ツールには `sub_agent` を含めません
+- 結果は `subAgentThreadId` と最終回答を含む JSON 文字列です
+- `Tools:Enabled` から `sub_agent` を外すと main agent からも公開しません
+
+## agent / prompt 定義ファイル
+
+- agent 定義は `agents.json` が既定です
+- 互換性のため、agent 定義ファイルが無い場合は `Paths:LegacySystemPrompts` も読み込み対象になります
+- prompt template 定義は `prompts.json` が既定です
+- 外部で JSON を直接編集した場合は `/agent reload` または `/prompt template reload` を実行します
+
+## ログと履歴
+
+起動ごとに 1 ファイルのテキストログと、thread ごとの構造化ログを保存します。
+
+- 保存先は既定で `logs/`
+- テキストログは `chat_yyyyMMdd_HHmmss_fff.txt`
+- thread ログは `logs/threads/thread_*.jsonl`
+- サブエージェントログは `logs/threads/subagents/subagent_thread_*.jsonl`
+- `ChatHistory:Enabled` を `false` にすると thread 機能と structured thread log は無効になります
+
+詳しい一覧は [`reference.md`](reference.md) を参照してください。

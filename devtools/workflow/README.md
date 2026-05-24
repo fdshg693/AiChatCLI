@@ -7,12 +7,14 @@
 関連ドキュメント:
 
 - リポジトリ全体の概要: [`../../README.md`](../../README.md)
-- アプリ本体の使い方: [`../../src/AiChatCLI/README.md`](../../src/AiChatCLI/README.md)
+- アプリ本体の入口: [`../../src/AiChatCLI/README.md`](../../src/AiChatCLI/README.md)
+- アプリ開発ガイド: [`../../src/AiChatCLI/docs/development.md`](../../src/AiChatCLI/docs/development.md)
 
 ## ドキュメントの分担
 
-- `src/AiChatCLI/README.md` はアプリ本体の実行方法、slash command、thread 履歴復元、ログ仕様などの user-facing な挙動を説明します
-- `src/AiChatCLI/README.md` はあわせて `AppPaths`、`ChatTurnPipeline`、`ConversationCodec`、`ThreadRecorder` など、アプリ側の主要な責務分割も説明します
+- `src/AiChatCLI/README.md` はアプリ本体の入口とクイックスタートを説明します
+- `src/AiChatCLI/docs/usage.md` と `src/AiChatCLI/docs/configuration.md` は、slash command、thread 履歴復元、ログ仕様、設定ファイルなどの user-facing な挙動を説明します
+- `src/AiChatCLI/docs/development.md` は `AppPaths`、`ChatTurnPipeline`、`ConversationCodec`、`ThreadRecorder` など、アプリ側の主要な責務分割を説明します
 - この README は `devtools/workflow/` 配下の Python runner と workflow archetype の使い方に集中します
 - そのため、AiChatCLI 本体の runtime path 解決、thread replay、slash command 実装詳細はこの README に重複して持ち込みません
 

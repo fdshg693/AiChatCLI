@@ -11,7 +11,11 @@ CLI から AI と対話する .NET アプリと、その開発を支援する Cu
 
 ## ドキュメント
 
-- アプリ本体の使い方と機能詳細: [`src/AiChatCLI/README.md`](src/AiChatCLI/README.md)
+- アプリ本体の入口ドキュメント: [`src/AiChatCLI/README.md`](src/AiChatCLI/README.md)
+- アプリ利用ガイド: [`src/AiChatCLI/docs/usage.md`](src/AiChatCLI/docs/usage.md)
+- アプリ設定ガイド: [`src/AiChatCLI/docs/configuration.md`](src/AiChatCLI/docs/configuration.md)
+- アプリ開発ガイド: [`src/AiChatCLI/docs/development.md`](src/AiChatCLI/docs/development.md)
+- アプリ早見表: [`src/AiChatCLI/docs/reference.md`](src/AiChatCLI/docs/reference.md)
 - workflow のセットアップと実行方法: [`devtools/workflow/README.md`](devtools/workflow/README.md)
 - CLI セッションラッパーの使い方: [`devtools/cli-session/README.md`](devtools/cli-session/README.md)
 - AI 向けの恒久ルール: `.cursor/rules/always/*.mdc`
@@ -28,8 +32,9 @@ CLI から AI と対話する .NET アプリと、その開発を支援する Cu
 ## クイックスタート
 
 1. API キーを設定する
-   - 環境変数 `OPENAI_API_KEY`
-   - または `src/AiChatCLI/appsettings.json` の `OpenAI:ApiKey`
+   - `src/AiChatCLI/appsettings.local.example.json` を `src/AiChatCLI/appsettings.local.json` にコピー
+   - `src/AiChatCLI/appsettings.local.json` の `OpenAI:ApiKey`
+   - または環境変数 `OPENAI_API_KEY`
 2. ビルドして実行する
 
 ```bash
@@ -43,7 +48,7 @@ dotnet run --project src/AiChatCLI/AiChatCLI.csproj
 dotnet test AiChatCLI.sln
 ```
 
-`src/AiChatCLI/README.md` には `/thread use <id>` による履歴復元、ログ保存先、`ChatHistory:Enabled` 無効時の制約も含めてまとめています。
+`src/AiChatCLI/README.md` は入口に絞り、利用方法・設定・開発・早見表は `src/AiChatCLI/docs/*.md` へ分割しています。
 
 ## 実装の要点
 

@@ -12,7 +12,7 @@ alwaysApply: false
 ## Conventions
 
 - Keep the workflow tool independent from the .NET app; do not embed the Python runner into `src/AiChatCLI/`.
-- App runtime details such as `AppPaths`, `ChatTurnPipeline`, `ConversationCodec`, `ThreadRecorder`, thread replay, chat logging, and slash-command behavior belong in `src/AiChatCLI/README.md`; keep workflow docs focused on the Python runner itself.
+- App runtime details such as `AppPaths`, `ChatTurnPipeline`, `ConversationCodec`, `ThreadRecorder`, thread replay, chat logging, and slash-command behavior belong in the app docs under `src/AiChatCLI/README.md` and `src/AiChatCLI/docs/`; keep workflow docs focused on the Python runner itself.
 - Prefer reusable `extends` and `compose` fragments for shared step structure.
 - Keep task-specific prompt text and variables in `prompt_configs/*.yaml`.
 - Paths in workflow JSON are resolved relative to the file that defines them.

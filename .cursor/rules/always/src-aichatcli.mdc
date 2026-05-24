@@ -6,21 +6,60 @@ alwaysApply: false
 # AiChatCLI App
 
 - `src/AiChatCLI/` is the .NET 9 console REPL for chatting with OpenAI models.
-- Entry point is `Program.cs`, which wires dependencies manually without a DI container and resolves runtime file locations through `AppPaths`.
-- Processing flow: user input -> `InteractivePromptReader` -> `ChatLoop` -> `ChatTurnPipeline` -> slash command handling or prompt transformation/logging -> `IChatService` -> console output.
-- `ThreadSessionManager` owns current-thread lifecycle and replay. `ThreadRecorder` owns append-only thread event writes under the configured thread log directory.
-- `ConversationCodec` is the shared mapper for live AutoGen messages and persisted `ThreadMessageRecord` values. Keep replay and live turn semantics aligned there instead of duplicating conversions.
-- Agent-callable tool availability is centralized in `AgentToolCatalog`; base tool adoption comes from `Tools:Enabled` config, while main/sub-agent exposure rules stay in code. Keep `OpenAIAgentFactory` and user-visible status/help output driven by that same catalog instead of duplicating tool lists.
-- Runtime files such as `agents.json`, `prompts.json`, `memory.json`, chat logs, and thread logs are configurable via `appsettings.json` `Paths:*`. Relative path values are resolved from the app content root via `AppPaths`.
-- Shared text file encoding defaults and encoding-aware reads live under `IO/`; prefer those helpers over ad hoc `Encoding.UTF8` / code page handling when adding file I/O.
+- Keep `Program.cs` thin. It should stay focused on encoding setup, `AppPaths.Discover(...)`, `AppComposition.Create(...)`, `ThreadSessionManager.Initialize()`, and `ChatLoop.RunAsync(...)`.
+- `AppComposition.Create(...)` is the composition root. Register new slash commands, tools, services, and cross-cutting wiring there instead of spreading setup logic across unrelated files.
+- `AppConfig` owns config loading from `appsettings.json`, `appsettings.local.json`, and environment variables. Preserve that precedence and keep user-facing config names documented.
+- `AppPaths` resolves runtime files relative to the app content root. When changing `Paths:*` behavior, keep relative-path semantics consistent across agents, prompts, memory, logs, and threads.
 
-## Conventions
+## Core Flow
+
+- Input flow is `InteractivePromptReader` -> `ChatLoop` -> `ChatTurnPipeline` -> slash command handling or prompt processing -> `IChatService`.
+- `ChatLoop` should remain a REPL/UI coordinator, not a home for business logic.
+- `ChatTurnPipeline` owns per-turn orchestration: slash-command dispatch, template expansion, thread recording, transcript logging, model calls, and final output mapping.
+- Keep human-readable transcript logging and structured thread logging in the same event order. Reordering those calls can break replay expectations.
+- `OpenAIChatService` and `AgentTurnExecutor` should stay focused on model interaction and tool execution, not CLI concerns.
+
+## Threads And Replay
+
+- `ThreadSessionManager` owns current-thread lifecycle, switching, initialization, and replay integration.
+- `ThreadRecorder` owns append-only event writes; `ThreadRepository` owns persisted JSONL access; `ThreadProjector` owns projection from events to current state.
+- `ConversationCodec` is the shared mapper between live AutoGen messages and persisted `ThreadMessageRecord` values. Do not duplicate live/replay conversions elsewhere.
+- Changes to persisted message shape, tool-call shape, or agent-state restoration usually require coordinated updates across `ConversationCodec`, thread projection, and focused replay tests.
+- Thread logs are the source of truth for `/thread use <id>`. Preserve append-only semantics and readable UTF-8 JSON output.
+
+## Agents And Tools
+
+- Agent-callable tool availability is centralized in `AgentToolCatalog`.
+- `Tools:Enabled` controls which base tools are adopted. Consumer-specific exposure stays in code through tool scope rules.
+- Keep `/status`, tool registration, and actual agent bindings driven by the same catalog so the visible tool list matches reality.
+- `OpenAIAgentFactory` builds main-agent and sub-agent bindings. Sub-agents must never expose `sub_agent`.
+- `SubAgentRunner` is responsible for isolated sub-agent execution and sub-agent thread logs. Keep parent-thread and sub-agent-thread behaviors aligned where intended, but keep contexts isolated.
+- Approval-gated command execution belongs in the command tool path, not ad hoc shell calls from unrelated layers.
+- Encoding-aware local file reads belong in `IO/` helpers such as `TextFileReader` and `TextEncodingDefaults`; avoid ad hoc encoding logic.
+
+## Extension Points
 
 - New chat backends should implement `IChatService`.
 - `IChatService` implementations are expected to support restoring persisted conversation state when thread replay is enabled.
-- New template processors should implement `IPromptTemplateProcessor`.
-- New slash commands should implement `ISlashCommand.Execute(string[] args, TextWriter output)` and be registered in `Program.cs`.
-- Slash commands that mutate conversation context, especially `/agent` and `/thread`, should keep `AgentSelection`, `IChatService`, and `ThreadSessionManager` in sync.
-- Changes that affect thread replay, tool aggregates, or persisted message shape should update both `ConversationCodec` and the focused tests in `tests/AiChatCLI.Tests/`.
-- When user-facing CLI behavior changes, update `src/AiChatCLI/README.md` together with the implementation.
-- Nullable reference types and implicit usings are enabled.
+- New slash commands should implement `ISlashCommand.Execute(string[] args, TextWriter output)` and be registered in `AppComposition.Create(...)`.
+- Slash commands that mutate conversation state must keep `AgentSelection`, `IChatService`, and `ThreadSessionManager` in sync.
+- New prompt/template features should go through `PromptTemplateProcessor`, `PromptTemplateManager`, and related placeholder-expansion helpers rather than one-off string replacement in the loop.
+- New tools should be registered through `AgentToolCatalog`, documented in the app docs, and reflected in status/help output when applicable.
+
+## Tests
+
+- Prefer focused xUnit tests in `tests/AiChatCLI.Tests/` over broad end-to-end-only coverage.
+- Path or config changes should usually touch `AppConfig` and `AppPaths` tests.
+- Tool exposure or slash-command output changes should usually touch `AgentToolCatalog`, `StatusCommand`, `SlashCommandHandler`, or command-specific tests.
+- Replay, log, or persisted-schema changes should usually touch `ConversationCodec`, `ThreadProjector`, `ThreadRepository`, `ThreadRecorder`, and related tests.
+- Tool-behavior changes should usually touch focused tests for `CommandTools`, `FileReadTools`, or `SubAgentRunner`.
+- When REPL interaction, prompt rendering, or command approval UX changes, consider validating behavior with `devtools/cli-session/` in addition to unit tests.
+
+## Documentation
+
+- Treat `src/AiChatCLI/README.md` as the entry document for the app.
+- Put end-user interaction details in `src/AiChatCLI/docs/usage.md`.
+- Put config files, environment variables, tool-enabling details, and log locations in `src/AiChatCLI/docs/configuration.md`.
+- Put architecture, extension guidance, and test strategy in `src/AiChatCLI/docs/development.md`.
+- Put concise command/tool/log quick-reference content in `src/AiChatCLI/docs/reference.md`.
+- When user-facing CLI behavior or config changes, update the relevant app docs in the same task rather than leaving everything to a single README.
