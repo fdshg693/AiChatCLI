@@ -38,14 +38,14 @@ internal sealed class AppComposition : IDisposable
         try
         {
             var config = new AppConfig(paths);
+            var sessionWorkingDirectory = new SessionWorkingDirectory();
             var agentCatalog = new AgentCatalog(
                 config.AgentsPath,
-                AgentBuiltInPlaceholders.Create(),
+                AgentBuiltInPlaceholders.CreateResolver(sessionWorkingDirectory),
                 config.MaxTemplateDepth);
             var agentSelection = new AgentSelection(agentCatalog);
             var memoryStore = new MemoryStore(config.MemoryPath);
             var memoryTools = new MemoryTools(memoryStore);
-            var sessionWorkingDirectory = new SessionWorkingDirectory();
             var fileReadTools = new FileReadTools(sessionWorkingDirectory, new TextFileReader());
             var commandTools = new CommandTools(
                 new ConsoleCommandApprovalPrompt(),

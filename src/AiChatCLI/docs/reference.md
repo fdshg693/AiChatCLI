@@ -47,6 +47,11 @@
 | `Paths:SubAgentThreadsDirectory` | `<ThreadsDirectory>/subagents` | sub-agent JSONL 保存先 |
 | `Tools:Enabled` | `memory`, `sub_agent`, `command`, `read_file` | base tool の公開制御 |
 
+## 組み込みプレースホルダー
+
+- `%SYSTEM_INFO%`: OS、.NET runtime、command ツールのシェルと文字コード設定
+- `%CURRENT_DIRECTORY_ENTRIES%`: セッション current directory 直下のファイル・フォルダ一覧
+
 ## ログ出力先
 
 | 種類 | 既定パス | 内容 |

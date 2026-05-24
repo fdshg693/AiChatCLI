@@ -107,12 +107,12 @@ translatorエージェント> こんにちは、世界！
   },
   "agents": {
     "default": "You are a helpful assistant.",
-    "coder": "You are an expert programmer.\n\n%SYSTEM_INFO%"
+    "coder": "You are an expert programmer.\n\n%SYSTEM_INFO%\n\n%CURRENT_DIRECTORY_ENTRIES%"
   }
 }
 ```
 
-agent prompt 内で `%KEY%` を使うと、アプリ組み込み値または同じ `agents` オブジェクト内の別 agent prompt を参照できます。アプリ組み込み値が同名の agent より優先されます。未定義の `%KEY%` はそのまま残ります。既定の組み込み値は `%SYSTEM_INFO%` で、OS、.NET runtime、command ツールが使うシェルと文字コード設定を含みます。`defaults.systemPromptPrefix` の値でも同じ組み込みプレースホルダー展開を使えます。
+agent prompt 内で `%KEY%` を使うと、アプリ組み込み値または同じ `agents` オブジェクト内の別 agent prompt を参照できます。アプリ組み込み値が同名の agent より優先されます。未定義の `%KEY%` はそのまま残ります。既定の組み込み値は `%SYSTEM_INFO%` と `%CURRENT_DIRECTORY_ENTRIES%` です。`%SYSTEM_INFO%` は OS、.NET runtime、command ツールが使うシェルと文字コード設定を含み、`%CURRENT_DIRECTORY_ENTRIES%` はセッション current directory 直下のファイル・フォルダ一覧を含みます。`defaults.systemPromptPrefix` の値でも同じ組み込みプレースホルダー展開を使えます。
 
 ## スレッド
 

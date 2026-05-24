@@ -9,21 +9,32 @@ internal sealed class AgentCatalog
 
     private readonly Dictionary<string, string> _agents;
     private readonly string _agentsPath;
-    private readonly IReadOnlyDictionary<string, string> _builtInPlaceholders;
+    private readonly Func<string, string?> _resolveBuiltInPlaceholder;
     private readonly int _maxPlaceholderDepth;
 
     public AgentCatalog(
         string agentsPath,
         IReadOnlyDictionary<string, string>? builtInPlaceholders = null,
         int maxPlaceholderDepth = 10)
+        : this(
+            agentsPath,
+            CreateBuiltInPlaceholderResolver(builtInPlaceholders),
+            maxPlaceholderDepth)
+    {
+    }
+
+    internal AgentCatalog(
+        string agentsPath,
+        Func<string, string?>? builtInPlaceholderResolver,
+        int maxPlaceholderDepth = 10)
     {
         _agentsPath = agentsPath;
-        _builtInPlaceholders = builtInPlaceholders ?? new Dictionary<string, string>();
+        _resolveBuiltInPlaceholder = builtInPlaceholderResolver ?? (_ => null);
         _maxPlaceholderDepth = maxPlaceholderDepth;
 
         var loaded = LoadAgents(
             agentsPath,
-            _builtInPlaceholders,
+            _resolveBuiltInPlaceholder,
             _maxPlaceholderDepth);
         _agents = loaded.Agents;
         SourcePath = loaded.SourcePath;
@@ -43,7 +54,7 @@ internal sealed class AgentCatalog
         {
             var loaded = LoadAgents(
                 _agentsPath,
-                _builtInPlaceholders,
+                _resolveBuiltInPlaceholder,
                 _maxPlaceholderDepth);
             _agents.Clear();
             foreach (var kv in loaded.Agents)
@@ -62,9 +73,20 @@ internal sealed class AgentCatalog
         }
     }
 
+    private static Func<string, string?> CreateBuiltInPlaceholderResolver(
+        IReadOnlyDictionary<string, string>? builtInPlaceholders)
+    {
+        if (builtInPlaceholders is null || builtInPlaceholders.Count == 0)
+            return _ => null;
+
+        return key => builtInPlaceholders.TryGetValue(key, out var value)
+            ? value
+            : null;
+    }
+
     private static (Dictionary<string, string> Agents, string SourcePath) LoadAgents(
         string agentsPath,
-        IReadOnlyDictionary<string, string> builtInPlaceholders,
+        Func<string, string?> resolveBuiltInPlaceholder,
         int maxPlaceholderDepth)
     {
         var sourcePath = agentsPath;
@@ -87,11 +109,11 @@ internal sealed class AgentCatalog
         if (!agents.ContainsKey(DefaultAgentName))
             agents[DefaultAgentName] = DefaultAgentPrompt;
 
-        var expandedAgents = ExpandAgentPlaceholders(agents, builtInPlaceholders, maxPlaceholderDepth);
+        var expandedAgents = ExpandAgentPlaceholders(agents, resolveBuiltInPlaceholder, maxPlaceholderDepth);
         if (string.IsNullOrWhiteSpace(systemPromptPrefix))
             return (expandedAgents, sourcePath);
 
-        var expandedCommonPrompt = ExpandPrompt(systemPromptPrefix, agents, builtInPlaceholders, maxPlaceholderDepth);
+        var expandedCommonPrompt = ExpandPrompt(systemPromptPrefix, agents, resolveBuiltInPlaceholder, maxPlaceholderDepth);
         return string.IsNullOrWhiteSpace(expandedCommonPrompt)
             ? (expandedAgents, sourcePath)
             : (PrependCommonPrompt(expandedAgents, expandedCommonPrompt), sourcePath);
@@ -172,12 +194,12 @@ internal sealed class AgentCatalog
 
     private static Dictionary<string, string> ExpandAgentPlaceholders(
         Dictionary<string, string> agents,
-        IReadOnlyDictionary<string, string> builtInPlaceholders,
+        Func<string, string?> resolveBuiltInPlaceholder,
         int maxPlaceholderDepth)
     {
         var expanded = new Dictionary<string, string>(agents.Comparer);
         foreach (var (name, prompt) in agents)
-            expanded[name] = ExpandPrompt(prompt, agents, builtInPlaceholders, maxPlaceholderDepth);
+            expanded[name] = ExpandPrompt(prompt, agents, resolveBuiltInPlaceholder, maxPlaceholderDepth);
 
         return expanded;
     }
@@ -185,11 +207,11 @@ internal sealed class AgentCatalog
     private static string ExpandPrompt(
         string prompt,
         IReadOnlyDictionary<string, string> agents,
-        IReadOnlyDictionary<string, string> builtInPlaceholders,
+        Func<string, string?> resolveBuiltInPlaceholder,
         int maxPlaceholderDepth) =>
         PlaceholderExpander.Expand(
             prompt,
-            key => ResolvePlaceholder(key, agents, builtInPlaceholders),
+            key => ResolvePlaceholder(key, agents, resolveBuiltInPlaceholder),
             maxPlaceholderDepth);
 
     private static Dictionary<string, string> PrependCommonPrompt(
@@ -208,9 +230,10 @@ internal sealed class AgentCatalog
     private static string? ResolvePlaceholder(
         string key,
         IReadOnlyDictionary<string, string> agents,
-        IReadOnlyDictionary<string, string> builtInPlaceholders)
+        Func<string, string?> resolveBuiltInPlaceholder)
     {
-        if (builtInPlaceholders.TryGetValue(key, out var builtInValue))
+        var builtInValue = resolveBuiltInPlaceholder(key);
+        if (builtInValue is not null)
             return builtInValue;
 
         return agents.TryGetValue(key, out var agentPrompt)

@@ -57,6 +57,39 @@ public sealed class PlaceholderExpansionTests : IDisposable
     }
 
     [Fact]
+    public void AgentCatalog_ExpandsCurrentDirectoryEntriesPlaceholderAndReevaluatesOnReload()
+    {
+        Directory.CreateDirectory(Path.Combine(_tempRoot, "docs"));
+        File.WriteAllText(Path.Combine(_tempRoot, "notes.txt"), "hello");
+
+        var agentsPath = Path.Combine(_tempRoot, "agents-current-directory.json");
+        File.WriteAllText(
+            agentsPath,
+            """
+            {
+              "agents": {
+                "coder": "Use this directory snapshot:\n%CURRENT_DIRECTORY_ENTRIES%"
+              }
+            }
+            """);
+        var catalog = new AgentCatalog(
+            agentsPath,
+            AgentBuiltInPlaceholders.CreateResolver(new SessionWorkingDirectory(_tempRoot)));
+
+        Assert.True(catalog.TryGetAgentPrompt("coder", out var prompt));
+        Assert.Contains($"- Current directory: {Path.GetFullPath(_tempRoot)}", prompt, StringComparison.Ordinal);
+        Assert.Contains("  - [dir] docs", prompt, StringComparison.Ordinal);
+        Assert.Contains("  - [file] notes.txt", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("%CURRENT_DIRECTORY_ENTRIES%", prompt, StringComparison.Ordinal);
+
+        File.WriteAllText(Path.Combine(_tempRoot, "later.txt"), "world");
+
+        Assert.True(catalog.ReloadAgentsFromDisk());
+        Assert.True(catalog.TryGetAgentPrompt("coder", out prompt));
+        Assert.Contains("  - [file] later.txt", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AgentCatalog_ExpandsSameFileReferencesAfterBuiltIns()
     {
         var agentsPath = Path.Combine(_tempRoot, "agents-nested.json");

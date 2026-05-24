@@ -1,10 +1,10 @@
 {
   "defaults": {
-    "systemPromptPrefix": ""
+    "systemPromptPrefix": "%CURRENT_DIRECTORY_ENTRIES%"
   },
   "agents": {
     "default": "You are a helpful assistant.",
     "translator": "You are a professional translator. Translate the user's input accurately into Japanese.",
-    "coder": "You are an expert programmer. Help the user with coding tasks.\n\n%SYSTEM_INFO%"
+    "coder": "You are an expert programmer. Help the user with coding tasks.Always use `read_file` tool to read the file.\n\n%SYSTEM_INFO%"
   }
 }

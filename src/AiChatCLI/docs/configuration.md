@@ -184,10 +184,13 @@ NO の理由 (任意): 今はテストを走らせたくない
   },
   "agents": {
     "default": "You are a helpful assistant.",
-    "coder": "You are an expert programmer.\n\n%SYSTEM_INFO%"
+    "coder": "You are an expert programmer.\n\n%SYSTEM_INFO%\n\n%CURRENT_DIRECTORY_ENTRIES%"
   }
 }
 ```
+
+- 組み込みプレースホルダーとして `%SYSTEM_INFO%` と `%CURRENT_DIRECTORY_ENTRIES%` を使えます
+- `%CURRENT_DIRECTORY_ENTRIES%` はセッション current directory 直下のファイル・フォルダ一覧を展開します
 
 ## ログと履歴
 
