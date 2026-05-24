@@ -96,9 +96,23 @@ translatorエージェント> こんにちは、世界！
 | `translator` | 翻訳者 |
 | `coder` | プログラマー |
 
-既定では `agents.json` で追加・編集でき、CLI からは `/agent ...` で操作します。外部で JSON を直接編集した場合は `/agent reload` で再読み込みできます。保存先は `Paths:Agents` で変更できます。互換性のため、agent 定義ファイルが無い場合は `Paths:LegacySystemPrompts` も読み込み対象になります。
+既定では `agents.json` で追加・編集でき、CLI からは `/agent ...` で操作します。外部で JSON を直接編集した場合は `/agent reload` で再読み込みできます。保存先は `Paths:Agents` で変更できます。
 
-agent prompt 内で `%KEY%` を使うと、アプリ組み込み値または同じ `agents.json` 内の別 agent prompt を参照できます。アプリ組み込み値が同名の agent より優先されます。未定義の `%KEY%` はそのまま残ります。既定の組み込み値は `%SYSTEM_INFO%` で、OS、.NET runtime、command ツールが使うシェルと文字コード設定を含みます。
+`agents.json` は `defaults` と `agents` を持つ structured schema です。`defaults.systemPromptPrefix` に空でない値を設定すると、その内容が各 agent の system prompt 先頭に共通プレフィックスとして追加されます。
+
+```json
+{
+  "defaults": {
+    "systemPromptPrefix": "Always reply in Japanese."
+  },
+  "agents": {
+    "default": "You are a helpful assistant.",
+    "coder": "You are an expert programmer.\n\n%SYSTEM_INFO%"
+  }
+}
+```
+
+agent prompt 内で `%KEY%` を使うと、アプリ組み込み値または同じ `agents` オブジェクト内の別 agent prompt を参照できます。アプリ組み込み値が同名の agent より優先されます。未定義の `%KEY%` はそのまま残ります。既定の組み込み値は `%SYSTEM_INFO%` で、OS、.NET runtime、command ツールが使うシェルと文字コード設定を含みます。`defaults.systemPromptPrefix` の値でも同じ組み込みプレースホルダー展開を使えます。
 
 ## スレッド
 

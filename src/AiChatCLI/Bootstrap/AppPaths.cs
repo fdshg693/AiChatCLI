@@ -6,7 +6,6 @@ internal sealed class AppPaths
     public const string DefaultLocalAppSettingsFileName = "appsettings.local.json";
     public const string DefaultLocalAppSettingsExampleFileName = "appsettings.local.example.json";
     public const string DefaultAgentsFileName = "agents.json";
-    public const string DefaultLegacySystemPromptsFileName = "system_prompts.json";
     public const string DefaultMemoryFileName = "memory.json";
     public const string DefaultPromptsFileName = "prompts.json";
     public const string DefaultChatHistoryDirectoryName = "logs";
@@ -25,8 +24,6 @@ internal sealed class AppPaths
     public string LocalAppSettingsPath => ResolveConfiguredPath(null, DefaultLocalAppSettingsFileName);
 
     public string AgentsPath => ResolveConfiguredPath(null, DefaultAgentsFileName);
-
-    public string LegacySystemPromptsPath => ResolveConfiguredPath(null, DefaultLegacySystemPromptsFileName);
 
     public string MemoryPath => ResolveConfiguredPath(null, DefaultMemoryFileName);
 

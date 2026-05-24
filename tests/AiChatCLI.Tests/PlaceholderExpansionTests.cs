@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace AiChatCLI.Tests;
 
 public sealed class PlaceholderExpansionTests : IDisposable
@@ -40,7 +42,9 @@ public sealed class PlaceholderExpansionTests : IDisposable
             agentsPath,
             """
             {
-              "coder": "Use this environment:\n%SYSTEM_INFO%"
+              "agents": {
+                "coder": "Use this environment:\n%SYSTEM_INFO%"
+              }
             }
             """);
         var catalog = new AgentCatalog(
@@ -60,8 +64,10 @@ public sealed class PlaceholderExpansionTests : IDisposable
             agentsPath,
             """
             {
-              "base": "Base prompt.\n%SYSTEM_INFO%",
-              "coder": "%base%\nWrite code carefully."
+              "agents": {
+                "base": "Base prompt.\n%SYSTEM_INFO%",
+                "coder": "%base%\nWrite code carefully."
+              }
             }
             """);
         var catalog = new AgentCatalog(
@@ -75,6 +81,61 @@ public sealed class PlaceholderExpansionTests : IDisposable
     }
 
     [Fact]
+    public void AgentCatalog_PrependsStructuredDefaultPromptToEachAgent()
+    {
+        var agentsPath = Path.Combine(_tempRoot, "agents-default-prompt.json");
+        File.WriteAllText(
+            agentsPath,
+            """
+            {
+              "defaults": {
+                "systemPromptPrefix": "Shared guidance.\n%SYSTEM_INFO%"
+              },
+              "agents": {
+                "default": "Be concise.",
+                "coder": "Write code carefully."
+              }
+            }
+            """);
+        var catalog = new AgentCatalog(
+            agentsPath,
+            builtInPlaceholders: CreateBuiltInPlaceholders());
+
+        Assert.True(catalog.TryGetAgentPrompt("default", out var defaultPrompt));
+        Assert.Equal("Shared guidance.\nOS: test-os\n\nBe concise.", defaultPrompt);
+
+        Assert.True(catalog.TryGetAgentPrompt("coder", out var coderPrompt));
+        Assert.Equal("Shared guidance.\nOS: test-os\n\nWrite code carefully.", coderPrompt);
+    }
+
+    [Fact]
+    public void AgentCatalog_PrependsStructuredDefaultPromptOnlyOnceWhenReferencingAnotherAgent()
+    {
+        var agentsPath = Path.Combine(_tempRoot, "agents-default-prompt-nested.json");
+        File.WriteAllText(
+            agentsPath,
+            """
+            {
+              "defaults": {
+                "systemPromptPrefix": "Shared guidance."
+              },
+              "agents": {
+                "base": "Base prompt.",
+                "coder": "%base%\nWrite code carefully."
+              }
+            }
+            """);
+        var catalog = new AgentCatalog(agentsPath);
+
+        Assert.True(catalog.TryGetAgentPrompt("coder", out var prompt));
+        Assert.StartsWith("Shared guidance.", prompt, StringComparison.Ordinal);
+        Assert.Contains("Base prompt.\nWrite code carefully.", prompt, StringComparison.Ordinal);
+        Assert.Equal(
+            prompt.IndexOf("Shared guidance.", StringComparison.Ordinal),
+            prompt.LastIndexOf("Shared guidance.", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void AgentCatalog_LeavesUnknownPlaceholdersUnchanged()
     {
         var agentsPath = Path.Combine(_tempRoot, "agents-unknown.json");
@@ -82,7 +143,9 @@ public sealed class PlaceholderExpansionTests : IDisposable
             agentsPath,
             """
             {
-              "coder": "Keep %UNKNOWN% literal."
+              "agents": {
+                "coder": "Keep %UNKNOWN% literal."
+              }
             }
             """);
         var catalog = new AgentCatalog(
@@ -101,7 +164,9 @@ public sealed class PlaceholderExpansionTests : IDisposable
             agentsPath,
             """
             {
-              "coder": "Before %SYSTEM_INFO%"
+              "agents": {
+                "coder": "Before %SYSTEM_INFO%"
+              }
             }
             """);
         var catalog = new AgentCatalog(
@@ -112,7 +177,9 @@ public sealed class PlaceholderExpansionTests : IDisposable
             agentsPath,
             """
             {
-              "coder": "After %SYSTEM_INFO%"
+              "agents": {
+                "coder": "After %SYSTEM_INFO%"
+              }
             }
             """);
 
@@ -120,6 +187,58 @@ public sealed class PlaceholderExpansionTests : IDisposable
         Assert.True(catalog.TryGetAgentPrompt("coder", out var prompt));
         Assert.Contains("After OS: test-os", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Before", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AgentCatalog_ReloadAgentsFromDisk_ReappliesStructuredDefaultPrompt()
+    {
+        var agentsPath = Path.Combine(_tempRoot, "agents-default-prompt-reload.json");
+        File.WriteAllText(
+            agentsPath,
+            """
+            {
+              "defaults": {
+                "systemPromptPrefix": "Before"
+              },
+              "agents": {
+                "coder": "Write code carefully."
+              }
+            }
+            """);
+        var catalog = new AgentCatalog(agentsPath);
+
+        File.WriteAllText(
+            agentsPath,
+            """
+            {
+              "defaults": {
+                "systemPromptPrefix": "After"
+              },
+              "agents": {
+                "coder": "Write code carefully."
+              }
+            }
+            """);
+
+        Assert.True(catalog.ReloadAgentsFromDisk());
+        Assert.True(catalog.TryGetAgentPrompt("coder", out var prompt));
+        Assert.StartsWith("After\n\nWrite code carefully.", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("Before", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AgentCatalog_RejectsLegacyFlatSchema()
+    {
+        var agentsPath = Path.Combine(_tempRoot, "agents-legacy.json");
+        File.WriteAllText(
+            agentsPath,
+            """
+            {
+              "coder": "Write code carefully."
+            }
+            """);
+
+        Assert.Throws<JsonException>(() => new AgentCatalog(agentsPath));
     }
 
     public void Dispose()

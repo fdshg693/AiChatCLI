@@ -81,7 +81,6 @@ public sealed class ToolVisibilityTests : IDisposable
               },
               "Paths": {
                 "Agents": "config/agents.custom.json",
-                "LegacySystemPrompts": "config/system_prompts.custom.json",
                 "Prompts": "config/prompts.custom.json",
                 "Memory": "state/memory.custom.json",
                 "ChatHistoryDirectory": "artifacts/chat",
@@ -95,7 +94,6 @@ public sealed class ToolVisibilityTests : IDisposable
         var config = new AppConfig(paths);
 
         Assert.Equal(Path.Combine(repoRoot, "config", "agents.custom.json"), config.AgentsPath);
-        Assert.Equal(Path.Combine(repoRoot, "config", "system_prompts.custom.json"), config.LegacySystemPromptsPath);
         Assert.Equal(Path.Combine(repoRoot, "config", "prompts.custom.json"), config.PromptsPath);
         Assert.Equal(Path.Combine(repoRoot, "state", "memory.custom.json"), config.MemoryPath);
         Assert.Equal(Path.Combine(repoRoot, "artifacts", "chat"), config.ChatHistoryDirectoryPath);
@@ -279,6 +277,19 @@ public sealed class ToolVisibilityTests : IDisposable
     {
         var repoRoot = CreateRepoRoot("status-command");
         var promptsPath = Path.Combine(repoRoot, "prompts.json");
+        File.WriteAllText(
+            Path.Combine(repoRoot, "agents.json"),
+            """
+            {
+              "defaults": {
+                "systemPromptPrefix": "Shared guidance."
+              },
+              "agents": {
+                "default": "You are a helpful assistant.",
+                "coder": "Write code carefully."
+              }
+            }
+            """);
         var memoryStore = new MemoryStore(Path.Combine(repoRoot, "memory.json"));
         var memoryTools = new MemoryTools(memoryStore);
         var toolCatalog = new AgentToolCatalog(
@@ -321,6 +332,7 @@ public sealed class ToolVisibilityTests : IDisposable
             $"利用可能 tool (sub-agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}",
             text,
             StringComparison.Ordinal);
+        Assert.Contains("agent 件数: 2", text, StringComparison.Ordinal);
         Assert.Contains($"template 定義ファイル: {promptsPath}", text, StringComparison.Ordinal);
         Assert.Contains($"agent 定義ファイル: {agentCatalog.SourcePath}", text, StringComparison.Ordinal);
         Assert.Contains($"memory 保存ファイル: {memoryStore.FilePath}", text, StringComparison.Ordinal);

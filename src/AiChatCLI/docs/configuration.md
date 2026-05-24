@@ -46,7 +46,6 @@ dotnet test AiChatCLI.sln
 | テンプレート展開の最大深度 | `Template:MaxDepth` | `10` |
 | 会話ログの有効化 | `ChatHistory:Enabled` | `true` |
 | agent 定義ファイル | `Paths:Agents` | `agents.json` |
-| legacy system prompt 定義ファイル | `Paths:LegacySystemPrompts` | `system_prompts.json` |
 | テンプレート定義ファイル | `Paths:Prompts` | `prompts.json` |
 | メモリ保存ファイル | `Paths:Memory` | `memory.json` |
 | 会話ログの保存ディレクトリ | `Paths:ChatHistoryDirectory` | `logs` |
@@ -173,9 +172,22 @@ NO の理由 (任意): 今はテストを走らせたくない
 ## agent / prompt 定義ファイル
 
 - agent 定義は `agents.json` が既定です
-- 互換性のため、agent 定義ファイルが無い場合は `Paths:LegacySystemPrompts` も読み込み対象になります
+- `agents.json` は `defaults` と `agents` を持つ structured schema です
+- `defaults.systemPromptPrefix` に空でない文字列を設定すると、その内容を各 agent の system prompt 先頭へ共通プレフィックスとして追加します
 - prompt template 定義は `prompts.json` が既定です
 - 外部で JSON を直接編集した場合は `/agent reload` または `/prompt template reload` を実行します
+
+```json
+{
+  "defaults": {
+    "systemPromptPrefix": "Always reply in Japanese."
+  },
+  "agents": {
+    "default": "You are a helpful assistant.",
+    "coder": "You are an expert programmer.\n\n%SYSTEM_INFO%"
+  }
+}
+```
 
 ## ログと履歴
 

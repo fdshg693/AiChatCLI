@@ -10,7 +10,6 @@ internal class AppConfig
     public int MaxTemplateDepth { get; }
     public bool ChatHistoryEnabled { get; }
     public string AgentsPath { get; }
-    public string LegacySystemPromptsPath { get; }
     public string PromptsPath { get; }
     public string MemoryPath { get; }
     public string ChatHistoryDirectoryPath { get; }
@@ -42,9 +41,6 @@ internal class AppConfig
         ChatHistoryEnabled = !bool.TryParse(config["ChatHistory:Enabled"], out var chatHistoryEnabled) ||
                              chatHistoryEnabled;
         AgentsPath = paths.ResolveConfiguredPath(ReadTrimmedValue(config, "Paths:Agents"), AppPaths.DefaultAgentsFileName);
-        LegacySystemPromptsPath = paths.ResolveConfiguredPath(
-            ReadTrimmedValue(config, "Paths:LegacySystemPrompts"),
-            AppPaths.DefaultLegacySystemPromptsFileName);
         PromptsPath = paths.ResolveConfiguredPath(ReadTrimmedValue(config, "Paths:Prompts"), AppPaths.DefaultPromptsFileName);
         MemoryPath = paths.ResolveConfiguredPath(ReadTrimmedValue(config, "Paths:Memory"), AppPaths.DefaultMemoryFileName);
 
