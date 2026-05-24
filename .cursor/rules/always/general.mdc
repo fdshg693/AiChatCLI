@@ -9,10 +9,12 @@ This file only keeps repository-wide guidance. Put app-specific and workflow-spe
 - `src/AiChatCLI/` contains the .NET 9 console app.
 - `tests/AiChatCLI.Tests/` contains focused xUnit tests for app seams such as path resolution, slash-command output, and thread replay/message mapping.
 - `devtools/workflow/` contains the Python workflow runner for Cursor CLI.
+- `devtools/cli-session/` contains the Python session wrapper for interactive CLI processes.
 - Read the nearest README before making substantive changes:
   - `README.md`
   - `src/AiChatCLI/README.md`
   - `devtools/workflow/README.md`
+  - `devtools/cli-session/README.md`
 - Keep user-facing behavior documented in the nearest README as part of the same change.
 - When project conventions or architecture guidance change, update the matching `.cursor/rules/` file in the same task.
 

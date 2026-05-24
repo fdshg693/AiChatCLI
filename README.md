@@ -7,11 +7,13 @@ CLI から AI と対話する .NET アプリと、その開発を支援する Cu
 - アプリ本体: `src/AiChatCLI/`
 - アプリ向け focused test: `tests/AiChatCLI.Tests/`
 - 開発支援 workflow: `devtools/workflow/`
+- 対話 CLI セッションラッパー: `devtools/cli-session/`
 
 ## ドキュメント
 
 - アプリ本体の使い方と機能詳細: [`src/AiChatCLI/README.md`](src/AiChatCLI/README.md)
 - workflow のセットアップと実行方法: [`devtools/workflow/README.md`](devtools/workflow/README.md)
+- CLI セッションラッパーの使い方: [`devtools/cli-session/README.md`](devtools/cli-session/README.md)
 - AI 向けの恒久ルール: `.cursor/rules/always/*.mdc`
 
 ## アプリ本体の主な機能
