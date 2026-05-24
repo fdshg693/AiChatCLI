@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed record ChatInputResult(
+internal sealed record ChatInputResult(
     bool HandledBySlashCommand,
     string? AgentName,
     string? Reply)

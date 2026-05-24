@@ -2,19 +2,19 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
-public enum AgentToolScope
+internal enum AgentToolScope
 {
     MainAndSubAgent,
     MainAgentOnly
 }
 
-public enum AgentToolConsumer
+internal enum AgentToolConsumer
 {
     MainAgent,
     SubAgent
 }
 
-public sealed record AgentToolDescriptor(
+internal sealed record AgentToolDescriptor(
     string Name,
     FunctionContract Contract,
     Func<string, Task<string>> InvokeAsync,

@@ -3,8 +3,14 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
+/// <summary>
+/// Exposes the AI-callable tool that delegates a task to a fresh sub-agent session.
+/// </summary>
 public partial class SubAgentTools
 {
+    /// <summary>
+    /// Tool name used in <c>Tools:Enabled</c> and tool registration.
+    /// </summary>
     public const string FunctionName = "sub_agent";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -14,7 +20,7 @@ public partial class SubAgentTools
 
     private readonly SubAgentRunner _runner;
 
-    public SubAgentTools(SubAgentRunner runner)
+    internal SubAgentTools(SubAgentRunner runner)
     {
         _runner = runner;
     }

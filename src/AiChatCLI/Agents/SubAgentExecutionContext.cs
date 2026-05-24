@@ -2,7 +2,7 @@ using System.Threading;
 
 namespace AiChatCLI;
 
-public static class SubAgentExecutionContext
+internal static class SubAgentExecutionContext
 {
     private static readonly AsyncLocal<int> Depth = new();
 

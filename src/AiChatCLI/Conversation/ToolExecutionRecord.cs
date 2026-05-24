@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed record ToolExecutionRecord(
+internal sealed record ToolExecutionRecord(
     string FunctionName,
     string FunctionArguments,
     string? Result,

@@ -2,13 +2,19 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
+/// <summary>
+/// Exposes the AI-callable durable memory tool backed by the app's local JSON memory store.
+/// </summary>
 public partial class MemoryTools
 {
+    /// <summary>
+    /// Base tool name used in <c>Tools:Enabled</c>.
+    /// </summary>
     public const string BaseToolName = "memory";
 
     private readonly MemoryStore _memoryStore;
 
-    public MemoryTools(MemoryStore memoryStore)
+    internal MemoryTools(MemoryStore memoryStore)
     {
         _memoryStore = memoryStore;
     }

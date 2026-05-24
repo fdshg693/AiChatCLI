@@ -2,7 +2,7 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
-public sealed class ConversationCodec
+internal sealed class ConversationCodec
 {
     public ThreadMessageRecord ToRecord(IMessage message) =>
         message switch

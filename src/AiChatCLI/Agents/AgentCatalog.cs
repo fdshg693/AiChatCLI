@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace AiChatCLI;
 
-public sealed class AgentCatalog
+internal sealed class AgentCatalog
 {
     private readonly Dictionary<string, string> _agents;
     private readonly string _agentsPath;

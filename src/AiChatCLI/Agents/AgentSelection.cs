@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed class AgentSelection
+internal sealed class AgentSelection
 {
     private readonly AgentCatalog _catalog;
 

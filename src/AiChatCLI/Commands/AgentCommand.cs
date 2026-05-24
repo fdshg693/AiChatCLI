@@ -1,6 +1,6 @@
 namespace AiChatCLI.Commands;
 
-public sealed class AgentCommand : ISlashCommand
+internal sealed class AgentCommand : ISlashCommand
 {
     private static readonly CommandHelpEntry[] HelpEntryDefinitions =
     [

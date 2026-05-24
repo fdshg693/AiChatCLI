@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace AiChatCLI;
 
-public sealed class ThreadRepository
+internal sealed class ThreadRepository
 {
     private readonly JsonSerializerOptions _jsonOptions;
 

@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed record CommandHelpEntry(
+internal sealed record CommandHelpEntry(
     string CommandPath,
     string Description,
     IReadOnlyList<string> Usages);

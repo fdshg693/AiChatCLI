@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public class ChatLoop
+internal class ChatLoop
 {
     private readonly AgentSelection _agentSelection;
     private readonly ChatHistoryLogger _chatHistory;

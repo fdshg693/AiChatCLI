@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public class SlashCommandHandler
+internal class SlashCommandHandler
 {
     private readonly Dictionary<string, ISlashCommand> _commands = new(StringComparer.OrdinalIgnoreCase);
 

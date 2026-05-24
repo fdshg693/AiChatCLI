@@ -2,7 +2,7 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
-public sealed class OpenAIChatService : IChatService
+internal sealed class OpenAIChatService : IChatService
 {
     private readonly OpenAIAgentFactory _agentFactory;
     private readonly ConversationCodec _conversationCodec;

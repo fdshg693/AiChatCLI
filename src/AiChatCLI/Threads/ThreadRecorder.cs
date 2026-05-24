@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace AiChatCLI;
 
-public sealed class ThreadRecorder
+internal sealed class ThreadRecorder
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

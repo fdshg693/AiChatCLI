@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public interface IChatService
+internal interface IChatService
 {
     Task<ChatTurnResult> SendAsync(string message);
     void SetAgent(string agentName, string systemPrompt);

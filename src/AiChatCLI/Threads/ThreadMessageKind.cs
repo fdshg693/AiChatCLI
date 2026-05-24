@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public enum ThreadMessageKind
+internal enum ThreadMessageKind
 {
     Text,
     ToolCallAggregate

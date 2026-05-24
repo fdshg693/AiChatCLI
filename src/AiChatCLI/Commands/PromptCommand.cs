@@ -1,6 +1,6 @@
 namespace AiChatCLI.Commands;
 
-public class PromptCommand : ISlashCommand
+internal class PromptCommand : ISlashCommand
 {
     private static readonly CommandHelpEntry PromptHelpEntry =
         new(

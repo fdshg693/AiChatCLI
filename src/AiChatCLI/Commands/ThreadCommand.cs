@@ -1,6 +1,6 @@
 namespace AiChatCLI.Commands;
 
-public sealed class ThreadCommand : ISlashCommand
+internal sealed class ThreadCommand : ISlashCommand
 {
     private static readonly CommandHelpEntry[] HelpEntryDefinitions =
     [

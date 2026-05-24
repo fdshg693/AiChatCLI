@@ -6,7 +6,7 @@ namespace AiChatCLI;
 /// <summary>
 /// Provides durable key-value storage for the memory tool using a single JSON file.
 /// </summary>
-public sealed class MemoryStore
+internal sealed class MemoryStore
 {
     private static readonly JsonSerializerOptions ReadOptions = new()
     {
@@ -366,7 +366,7 @@ public sealed class MemoryStore
 /// Represents a single durable memory key returned by the list operation.
 /// </summary>
 /// <param name="Key">The stable identifier for the stored memory item.</param>
-public sealed record MemoryKeyItem(string Key);
+internal sealed record MemoryKeyItem(string Key);
 
 /// <summary>
 /// Represents the result of reading a single memory item.
@@ -374,19 +374,19 @@ public sealed record MemoryKeyItem(string Key);
 /// <param name="Key">The requested memory key.</param>
 /// <param name="Value">The stored value when the key was found.</param>
 /// <param name="Found">Whether the requested key exists in the memory store.</param>
-public sealed record MemoryValueItem(string Key, string? Value, bool Found);
+internal sealed record MemoryValueItem(string Key, string? Value, bool Found);
 
 /// <summary>
 /// Represents the result of deleting a single memory item.
 /// </summary>
 /// <param name="Key">The requested memory key.</param>
 /// <param name="Deleted">Whether the key existed and was deleted.</param>
-public sealed record MemoryDeleteItem(string Key, bool Deleted);
+internal sealed record MemoryDeleteItem(string Key, bool Deleted);
 
 /// <summary>
 /// Supported operations for the durable memory tool.
 /// </summary>
-public enum MemoryOperation
+internal enum MemoryOperation
 {
     /// <summary>
     /// No valid operation was supplied.
@@ -417,7 +417,7 @@ public enum MemoryOperation
 /// <summary>
 /// Describes the outcome of a memory tool operation.
 /// </summary>
-public sealed record MemoryToolResponse
+internal sealed record MemoryToolResponse
 {
     /// <summary>
     /// Gets a value indicating whether the requested operation succeeded.

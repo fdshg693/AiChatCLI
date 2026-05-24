@@ -2,12 +2,12 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
-public interface IAgentTurnExecutor
+internal interface IAgentTurnExecutor
 {
     Task<AgentTurnExecution> ExecuteAsync(IAgent agent, List<IMessage> turnHistory);
 }
 
-public sealed class AgentTurnExecutor : IAgentTurnExecutor
+internal sealed class AgentTurnExecutor : IAgentTurnExecutor
 {
     private readonly ConversationCodec _conversationCodec;
 
@@ -55,6 +55,6 @@ public sealed class AgentTurnExecutor : IAgentTurnExecutor
     }
 }
 
-public sealed record AgentTurnExecution(
+internal sealed record AgentTurnExecution(
     ChatTurnResult TurnResult,
     IReadOnlyList<IMessage> TurnHistory);

@@ -2,7 +2,7 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
-public sealed class AgentToolCatalog
+internal sealed class AgentToolCatalog
 {
     private readonly HashSet<string> _enabledBaseTools;
     private readonly List<AgentToolDescriptor> _tools = [];

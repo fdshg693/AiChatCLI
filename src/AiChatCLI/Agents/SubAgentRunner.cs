@@ -2,7 +2,7 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
-public sealed class SubAgentRunner
+internal sealed class SubAgentRunner
 {
     public const string AgentName = "subagent";
     public const string ThreadIdPrefix = "subagent_thread";
@@ -65,6 +65,6 @@ public sealed class SubAgentRunner
     }
 }
 
-public sealed record SubAgentRunResult(
+internal sealed record SubAgentRunResult(
     string ThreadId,
     string FinalReply);

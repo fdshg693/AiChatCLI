@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public interface IPromptTemplateProcessor
+internal interface IPromptTemplateProcessor
 {
     string Process(string input);
 }

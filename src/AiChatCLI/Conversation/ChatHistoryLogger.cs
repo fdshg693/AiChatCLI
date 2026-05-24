@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace AiChatCLI;
 
-public sealed class ChatHistoryLogger : IDisposable
+internal sealed class ChatHistoryLogger : IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

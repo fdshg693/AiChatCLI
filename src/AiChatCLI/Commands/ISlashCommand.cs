@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public interface ISlashCommand
+internal interface ISlashCommand
 {
     string Name { get; }
     string Description { get; }

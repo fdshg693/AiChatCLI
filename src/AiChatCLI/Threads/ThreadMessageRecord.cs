@@ -2,7 +2,7 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
-public sealed record ThreadMessageRecord(
+internal sealed record ThreadMessageRecord(
     ThreadMessageKind Kind,
     string? Role,
     string? Content,

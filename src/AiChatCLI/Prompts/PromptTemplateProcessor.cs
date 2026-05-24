@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace AiChatCLI;
 
-public class PromptTemplateProcessor : IPromptTemplateProcessor
+internal class PromptTemplateProcessor : IPromptTemplateProcessor
 {
     private static readonly Regex s_templateReferencePattern = new(@"%([^%\s]+)%");
     private readonly PromptTemplateManager _templateManager;

@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed record ThreadSnapshot(
+internal sealed record ThreadSnapshot(
     string ThreadId,
     string CurrentAgentName,
     string CurrentSystemPrompt,

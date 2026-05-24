@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed record SubAgentToolResponse(
+internal sealed record SubAgentToolResponse(
     bool Ok,
     string? SubAgentThreadId,
     string? Result,

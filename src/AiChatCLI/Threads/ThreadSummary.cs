@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed record ThreadSummary(
+internal sealed record ThreadSummary(
     string ThreadId,
     string CurrentAgentName,
     string CurrentSystemPrompt,

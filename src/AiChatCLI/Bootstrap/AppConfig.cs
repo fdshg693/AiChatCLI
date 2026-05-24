@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace AiChatCLI;
 
-public class AppConfig
+internal class AppConfig
 {
     public string ApiKey { get; }
     public string? TavilyApiKey { get; }

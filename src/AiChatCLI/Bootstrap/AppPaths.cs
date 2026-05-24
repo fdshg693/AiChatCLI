@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed class AppPaths
+internal sealed class AppPaths
 {
     public const string DefaultAppSettingsFileName = "appsettings.json";
     public const string DefaultLocalAppSettingsFileName = "appsettings.local.json";

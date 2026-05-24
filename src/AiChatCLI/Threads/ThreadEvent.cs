@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed record ThreadEvent
+internal sealed record ThreadEvent
 {
     public const int CurrentSchemaVersion = 1;
 

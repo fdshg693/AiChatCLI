@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public static class CommandConventions
+internal static class CommandConventions
 {
     public const string GroupedGrammar = "/<resource> <subresource> <action> [args...]";
     public const string StandaloneGrammar = "/<resource> <action> [args...]";

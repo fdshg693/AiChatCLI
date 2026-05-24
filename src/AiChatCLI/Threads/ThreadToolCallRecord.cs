@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed record ThreadToolCallRecord(
+internal sealed record ThreadToolCallRecord(
     string FunctionName,
     string FunctionArguments,
     string? Result,

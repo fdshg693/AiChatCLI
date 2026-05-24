@@ -2,7 +2,7 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
-public sealed class ThreadProjector
+internal sealed class ThreadProjector
 {
     private const string DefaultAgentName = "default";
     private const string DefaultSystemPrompt = "You are a helpful assistant.";

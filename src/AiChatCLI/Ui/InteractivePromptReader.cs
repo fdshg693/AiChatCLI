@@ -2,7 +2,7 @@ using System.Text;
 
 namespace AiChatCLI;
 
-public sealed class InteractivePromptReader
+internal sealed class InteractivePromptReader
 {
     private readonly PromptTemplateManager _templateManager;
     private readonly IClipboardService _clipboardService;

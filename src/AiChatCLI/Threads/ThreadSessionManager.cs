@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed class ThreadSessionManager : IDisposable
+internal sealed class ThreadSessionManager : IDisposable
 {
     private readonly IChatService _chatService;
     private readonly AgentSelection _agentSelection;

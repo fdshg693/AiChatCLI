@@ -3,8 +3,14 @@ using AutoGen.Core;
 
 namespace AiChatCLI;
 
+/// <summary>
+/// Exposes the AI-callable Tavily web search tool for the console app.
+/// </summary>
 public partial class TavilySearchTools
 {
+    /// <summary>
+    /// Base tool name used in <c>Tools:Enabled</c>.
+    /// </summary>
     public const string BaseToolName = "search";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -22,7 +28,7 @@ public partial class TavilySearchTools
 
     private readonly TavilySearchClient _client;
 
-    public TavilySearchTools(TavilySearchClient client)
+    internal TavilySearchTools(TavilySearchClient client)
     {
         _client = client;
     }

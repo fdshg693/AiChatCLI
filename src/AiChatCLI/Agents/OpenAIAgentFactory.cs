@@ -5,7 +5,7 @@ using OpenAI;
 
 namespace AiChatCLI;
 
-public sealed class OpenAIAgentFactory
+internal sealed class OpenAIAgentFactory
 {
     private readonly OpenAIClient _client;
     private readonly string _model;

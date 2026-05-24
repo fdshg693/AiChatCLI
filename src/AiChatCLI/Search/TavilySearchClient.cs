@@ -6,7 +6,7 @@ using System.Globalization;
 
 namespace AiChatCLI;
 
-public sealed class TavilySearchClient
+internal sealed class TavilySearchClient
 {
     private const string SearchEndpoint = "https://api.tavily.com/search";
 
@@ -143,19 +143,19 @@ public sealed class TavilySearchClient
     }
 }
 
-public sealed record TavilySearchResponse(
+internal sealed record TavilySearchResponse(
     string Query,
     IReadOnlyList<TavilySearchResult> Results,
     double? ResponseTime,
     string? RequestId);
 
-public sealed record TavilySearchResult(
+internal sealed record TavilySearchResult(
     string? Title,
     string? Url,
     string? Content,
     double? Score);
 
-public sealed class TavilySearchException : Exception
+internal sealed class TavilySearchException : Exception
 {
     public TavilySearchException(HttpStatusCode statusCode, string message)
         : base(message)

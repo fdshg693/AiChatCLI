@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace AiChatCLI;
 
-public class PromptTemplateManager
+internal class PromptTemplateManager
 {
     private readonly Dictionary<string, string> _templates;
     private readonly string _templatesPath;

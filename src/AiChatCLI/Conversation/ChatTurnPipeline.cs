@@ -1,6 +1,6 @@
 namespace AiChatCLI;
 
-public sealed class ChatTurnPipeline
+internal sealed class ChatTurnPipeline
 {
     private readonly IChatService _chatService;
     private readonly AgentSelection _agentSelection;
