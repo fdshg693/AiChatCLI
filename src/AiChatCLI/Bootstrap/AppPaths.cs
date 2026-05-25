@@ -8,6 +8,7 @@ internal sealed class AppPaths
     public const string DefaultAgentsFileName = "agents.json";
     public const string DefaultMemoryFileName = "memory.json";
     public const string DefaultPromptsFileName = "prompts.json";
+    public const string DefaultSkillsDirectoryName = "skills";
     public const string DefaultChatHistoryDirectoryName = "logs";
     public const string DefaultThreadsDirectoryName = "threads";
     public const string DefaultSubAgentThreadsDirectoryName = "subagents";

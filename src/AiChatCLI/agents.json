@@ -7,6 +7,10 @@
       "prompt": "You are a helpful assistant.",
       "tools": ["memory", "sub_agent", "command", "read_file", "search"]
     },
+    "skill-tester": {
+      "prompt": "You are a helpful assistant.",
+      "tools": ["skill"]
+    },
     "web": {
       "prompt": "You are a web search assistant. You can use the `search` tool to search the web.",
       "tools": ["memory", "command", "search"]

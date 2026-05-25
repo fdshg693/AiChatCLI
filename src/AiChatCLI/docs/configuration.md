@@ -81,6 +81,7 @@ dotnet test AiChatCLI.sln
 - `tools` は tool 名の配列です
 - `tools: []` にすると、その agent は tool を 1 つも公開しません
 - sub-agent は「現在の agent に許可された tool 群」を引き継ぎますが、`sub_agent` 自体は自動的に除外されます
+- `skill` を含めると、`skills/*/SKILL.md` にある skill の `name` / `description` が system prompt に追加され、本文は tool 呼び出し時だけ読み込まれます
 - `search` をどれか 1 つでも有効にした場合は `Tavily:ApiKey` または `TAVILY_API_KEY` が必須です
 
 ```json
@@ -91,7 +92,7 @@ dotnet test AiChatCLI.sln
   "agents": {
     "default": {
       "prompt": "You are a helpful assistant.",
-      "tools": ["memory", "sub_agent", "command", "read_file"]
+      "tools": ["memory", "sub_agent", "command", "read_file", "skill"]
     },
     "translator": {
       "prompt": "Translate the user's input accurately into Japanese.",
@@ -99,7 +100,7 @@ dotnet test AiChatCLI.sln
     },
     "coder": {
       "prompt": "You are an expert programmer.\n\n%SYSTEM_INFO%",
-      "tools": ["memory", "sub_agent", "command", "read_file", "search"]
+      "tools": ["memory", "sub_agent", "command", "read_file", "skill", "search"]
     }
   }
 }
@@ -111,6 +112,7 @@ dotnet test AiChatCLI.sln
 - `read_file`
 - `command`
 - `sub_agent`
+- `skill`
 - `search`
 
 ### `memory`
@@ -157,6 +159,38 @@ Tavily Search API を使う opt-in の検索ツールです。
     "ApiKey": "tvly-your-tavily-api-key"
   }
 }
+```
+
+### `skill`
+
+ローカルの `skills/*/SKILL.md` から skill 本文を遅延読み込みするツールです。
+
+- agent の `tools` に `skill` を含めたときだけ公開されます
+- system prompt には各 skill の `name` と `description` だけが追加されます
+- モデルが `skill` ツールを呼ぶと、その skill の markdown 本文、`SKILL.md` の絶対パス、skill ディレクトリの絶対パスが JSON で返ります
+- front matter は `name` と `description` だけをサポートし、それ以外のキーは未対応です
+- skill ファイルは `skills/<skill-directory>/SKILL.md` に置き、必要なら同じディレクトリへ補助リソースを置けます
+
+```json
+{
+  "agents": {
+    "coder": {
+      "prompt": "Use local skills when they match the task.",
+      "tools": ["read_file", "skill"]
+    }
+  }
+}
+```
+
+```md
+---
+name: dotnet-test
+description: Run focused dotnet build/test commands before finalizing a change.
+---
+# dotnet-test
+
+1. Run `dotnet build`.
+2. Run focused `dotnet test` for touched seams.
 ```
 
 ```json
@@ -207,6 +241,7 @@ NO の理由 (任意): 今はテストを走らせたくない
 - 各 `agents.<name>` は `prompt` と `tools` を持つ object です
 - prompt template 定義は `prompts.json` が既定です
 - 外部で JSON を直接編集した場合は `/agent reload` または `/prompt template reload` を実行します
+- skill 定義は `skills/*/SKILL.md` が既定で、`/agent reload` や agent 切り替え時に利用可能 skill の name / description が再評価されます
 
 ```json
 {

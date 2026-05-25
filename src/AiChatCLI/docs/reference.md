@@ -30,6 +30,7 @@
 | `sub_agent` | agent の `tools` に含める | main のみ | 独立コンテキストへ作業委譲 | sub-agent から再帰起動不可 |
 | `command` | agent の `tools` に含める | main / sub | 承認付きローカルコマンド実行 | 実行前に `YES/NO` が必要 |
 | `read_file` | agent の `tools` に含める | main / sub | ローカルファイルの読み取り | 読み取り専用 |
+| `skill` | agent の `tools` に含める | main / sub | ローカル skill markdown の遅延読み込み | prompt へは name / description のみ注入 |
 | `search` | agent の `tools` に含める | main / sub | Tavily Web 検索 | `Tavily:ApiKey` または環境変数が必要 |
 
 ## 主な設定キー
@@ -50,6 +51,13 @@
 
 - `%SYSTEM_INFO%`: OS、.NET runtime、command ツールのシェルと文字コード設定
 - `%CURRENT_DIRECTORY_ENTRIES%`: セッション current directory 直下のファイル・フォルダ一覧
+
+## skill 配置
+
+- 既定の skill ルートは `skills/`
+- 各 skill は `skills/<skill-directory>/SKILL.md` に置く
+- front matter は `name` と `description` のみ対応
+- `skill` ツールの戻り値には `SKILL.md` と skill ディレクトリの絶対パスが含まれる
 
 ## ログ出力先
 
@@ -75,5 +83,5 @@
 | 1 ターン処理 | `Conversation/ChatLoop.cs`, `Conversation/ChatTurnPipeline.cs` |
 | live/replay の message 変換 | `Conversation/ConversationCodec.cs` |
 | thread lifecycle | `Threads/ThreadSessionManager.cs`, `Threads/ThreadRecorder.cs`, `Threads/ThreadProjector.cs` |
-| tool 公開 | `Agents/AgentToolCatalog.cs`, `Agents/OpenAIAgentFactory.cs` |
+| tool 公開 | `Agents/AgentToolCatalog.cs`, `Agents/OpenAIAgentFactory.cs`, `Skills/` |
 | slash command | `Commands/` |

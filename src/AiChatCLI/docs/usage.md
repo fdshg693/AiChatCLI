@@ -100,6 +100,8 @@ translatorエージェント> こんにちは、世界！
 
 `agents.json` は `defaults` と `agents` を持つ structured schema です。`defaults.systemPromptPrefix` に空でない値を設定すると、その内容が各 agent の system prompt 先頭に共通プレフィックスとして追加されます。各 agent は `prompt` と `tools` を持ち、利用可能な tool は agent ごとに切り替えられます。
 
+`tools` に `skill` を含めると、`skills/*/SKILL.md` にある skill の `name` / `description` だけが system prompt に追加されます。本文は必要になったときだけ `skill` ツール呼び出しで取得されます。
+
 ```json
 {
   "defaults": {
@@ -108,11 +110,11 @@ translatorエージェント> こんにちは、世界！
   "agents": {
     "default": {
       "prompt": "You are a helpful assistant.",
-      "tools": ["memory", "sub_agent", "command", "read_file"]
+      "tools": ["memory", "sub_agent", "command", "read_file", "skill"]
     },
     "coder": {
       "prompt": "You are an expert programmer.\n\n%SYSTEM_INFO%\n\n%CURRENT_DIRECTORY_ENTRIES%",
-      "tools": ["memory", "sub_agent", "command", "read_file"]
+      "tools": ["memory", "sub_agent", "command", "read_file", "skill"]
     }
   }
 }

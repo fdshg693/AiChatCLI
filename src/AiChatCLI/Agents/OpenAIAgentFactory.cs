@@ -10,12 +10,18 @@ internal sealed class OpenAIAgentFactory
     private readonly OpenAIClient _client;
     private readonly string _model;
     private readonly AgentToolCatalog _toolCatalog;
+    private readonly SkillPromptAugmenter _skillPromptAugmenter;
 
-    public OpenAIAgentFactory(string apiKey, string model, AgentToolCatalog toolCatalog)
+    public OpenAIAgentFactory(
+        string apiKey,
+        string model,
+        AgentToolCatalog toolCatalog,
+        SkillPromptAugmenter skillPromptAugmenter)
     {
         _client = new OpenAIClient(apiKey);
         _model = model;
         _toolCatalog = toolCatalog;
+        _skillPromptAugmenter = skillPromptAugmenter;
     }
 
     public IAgent CreateMainAgent(string agentName, string systemPrompt, IReadOnlySet<string> enabledTools) =>
@@ -35,10 +41,11 @@ internal sealed class OpenAIAgentFactory
             : agentName.Trim();
 
         var (functions, functionMap) = _toolCatalog.GetBindings(enabledTools, toolConsumer);
+        var effectiveSystemPrompt = _skillPromptAugmenter.AppendAvailableSkillsIfEnabled(systemPrompt, enabledTools);
         IAgent agent = new OpenAIChatAgent(
             chatClient: _client.GetChatClient(_model),
             name: effectiveAgentName,
-            systemMessage: systemPrompt)
+            systemMessage: effectiveSystemPrompt)
             .RegisterMessageConnector();
 
         if (functions.Count == 0)

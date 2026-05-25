@@ -143,25 +143,26 @@ public sealed class ToolVisibilityTests : IDisposable
         var memoryTools = new MemoryTools(memoryStore);
         var toolCatalog = new AgentToolCatalog();
         var enabledTools = new HashSet<string>(
-            [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName],
+            [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName, SkillTools.BaseToolName],
             StringComparer.OrdinalIgnoreCase);
 
         toolCatalog.RegisterMemoryTool(memoryTools);
         toolCatalog.RegisterFileReadTool(CreateFileReadTools());
         toolCatalog.RegisterSubAgentTool(CreateSubAgentTools());
+        toolCatalog.RegisterSkillTool(CreateSkillTools(Path.Combine(_tempRoot, "skills")));
 
         Assert.Equal(
-            [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName],
+            [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SubAgentTools.FunctionName, SkillTools.BaseToolName],
             toolCatalog.GetEnabledToolNames(enabledTools, AgentToolConsumer.MainAgent));
         Assert.Equal(
-            [MemoryTools.BaseToolName, FileReadTools.BaseToolName],
+            [MemoryTools.BaseToolName, FileReadTools.BaseToolName, SkillTools.BaseToolName],
             toolCatalog.GetEnabledToolNames(enabledTools, AgentToolConsumer.SubAgent));
     }
 
     [Fact]
     public void AgentToolCatalog_FindsUnknownToolNames()
     {
-        var unknownTools = AgentToolCatalog.FindUnknownToolNames(["memory", "mystery_tool", "another_tool"]);
+        var unknownTools = AgentToolCatalog.FindUnknownToolNames(["memory", "skill", "mystery_tool", "another_tool"]);
 
         Assert.Equal(["another_tool", "mystery_tool"], unknownTools);
     }
@@ -181,11 +182,11 @@ public sealed class ToolVisibilityTests : IDisposable
               "agents": {
                 "default": {
                   "prompt": "You are a helpful assistant.",
-                  "tools": ["memory", "sub_agent", "read_file"]
+                  "tools": ["memory", "sub_agent", "read_file", "skill"]
                 },
                 "coder": {
                   "prompt": "Write code carefully.",
-                  "tools": ["read_file"]
+                  "tools": ["read_file", "skill"]
                 }
               }
             }
@@ -196,6 +197,7 @@ public sealed class ToolVisibilityTests : IDisposable
         toolCatalog.RegisterMemoryTool(memoryTools);
         toolCatalog.RegisterFileReadTool(CreateFileReadTools());
         toolCatalog.RegisterSubAgentTool(CreateSubAgentTools());
+        toolCatalog.RegisterSkillTool(CreateSkillTools(Path.Combine(repoRoot, "skills")));
 
         var agentCatalog = new AgentCatalog(Path.Combine(repoRoot, "agents.json"));
         var agentSelection = new AgentSelection(agentCatalog);
@@ -222,11 +224,11 @@ public sealed class ToolVisibilityTests : IDisposable
 
         var text = output.ToString();
         Assert.Contains(
-            $"利用可能 tool (current agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}, {SubAgentTools.FunctionName}",
+            $"利用可能 tool (current agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}, {SubAgentTools.FunctionName}, {SkillTools.BaseToolName}",
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            $"利用可能 tool (current sub-agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}",
+            $"利用可能 tool (current sub-agent): {MemoryTools.BaseToolName}, {FileReadTools.BaseToolName}, {SkillTools.BaseToolName}",
             text,
             StringComparison.Ordinal);
         Assert.Contains("agent 件数: 2", text, StringComparison.Ordinal);
@@ -265,6 +267,9 @@ public sealed class ToolVisibilityTests : IDisposable
 
     private static FileReadTools CreateFileReadTools() =>
         new(new SessionWorkingDirectory(Path.GetTempPath()), new TextFileReader());
+
+    private static SkillTools CreateSkillTools(string rootDirectoryPath) =>
+        new(new SkillCatalog(rootDirectoryPath, new TextFileReader()));
 
     private sealed class StubChatService : IChatService
     {

@@ -58,6 +58,7 @@ defaultエージェント> exit
 - `sub_agent` による独立コンテキストのサブエージェント実行
 - approval-gated な `command` によるローカルコマンド実行
 - `read_file` によるローカルファイルの読み取り
+- `skill` によるローカル skill markdown の遅延読み込み
 - `search` による Tavily Web 検索
 - `logs/threads/*.jsonl` を正本にした thread replay と会話継続
 
@@ -69,6 +70,7 @@ defaultエージェント> exit
 - `Bootstrap/` は config / path discovery と manual wiring を担います
 - `Conversation/` は REPL と 1 ターン処理、モデル送信、live / persisted message 変換を担います
 - `Agents/` は agent 定義、tool catalog、factory、sub-agent 実行を担います
+- `Skills/` は `skills/*/SKILL.md` の読み込みと skill tool 用の prompt 注入を担います
 - `Threads/` は current thread lifecycle、append-only event 記録、thread replay を担います
 - `Commands/` は slash command 実装、`Prompts/` は template 管理、`Ui/` は interactive prompt を担います
 

@@ -39,6 +39,8 @@ internal sealed class AppComposition : IDisposable
         {
             var config = new AppConfig(paths);
             var sessionWorkingDirectory = new SessionWorkingDirectory();
+            var textFileReader = new TextFileReader();
+            var skillsDirectoryPath = paths.ResolveConfiguredPath(null, AppPaths.DefaultSkillsDirectoryName);
             var agentCatalog = new AgentCatalog(
                 config.AgentsPath,
                 AgentBuiltInPlaceholders.CreateResolver(sessionWorkingDirectory),
@@ -47,14 +49,17 @@ internal sealed class AppComposition : IDisposable
             ValidateConfiguredAgentTools(agentCatalog);
             var memoryStore = new MemoryStore(config.MemoryPath);
             var memoryTools = new MemoryTools(memoryStore);
-            var fileReadTools = new FileReadTools(sessionWorkingDirectory, new TextFileReader());
+            var fileReadTools = new FileReadTools(sessionWorkingDirectory, textFileReader);
             var commandTools = new CommandTools(
                 new ConsoleCommandApprovalPrompt(),
                 new LocalCommandExecutor());
+            var skillCatalog = new SkillCatalog(skillsDirectoryPath, textFileReader);
+            var skillPromptAugmenter = new SkillPromptAugmenter(skillCatalog);
             var toolCatalog = new AgentToolCatalog();
             toolCatalog.RegisterMemoryTool(memoryTools);
             toolCatalog.RegisterFileReadTool(fileReadTools);
             toolCatalog.RegisterCommandTool(commandTools);
+            toolCatalog.RegisterSkillTool(new SkillTools(skillCatalog));
             var searchToolEnabled = agentCatalog
                 .GetAgents()
                 .Any(agent => agent.Value.EnabledTools.Contains(TavilySearchTools.BaseToolName));
@@ -76,7 +81,8 @@ internal sealed class AppComposition : IDisposable
             var agentFactory = new OpenAIAgentFactory(
                 config.ApiKey,
                 config.Model,
-                toolCatalog);
+                toolCatalog,
+                skillPromptAugmenter);
             var subAgentRepository = config.ChatHistoryEnabled
                 ? ThreadRepository.CreateSubAgentRepository(config.SubAgentThreadsDirectoryPath)
                 : null;

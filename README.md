@@ -29,6 +29,7 @@ CLI から AI と対話する .NET アプリと、その開発を支援する Cu
 - `memory.json` を使った Function Calling ベースの長期メモリ
 - `sub_agent` ツールによる、独立した会話コンテキストのサブエージェント実行
 - 承認付き `command` ツールによるローカルコマンド実行
+- `skill` ツールによるローカル skill markdown の遅延読み込み
 - `logs/threads/*.jsonl` を正本にした thread 履歴復元と会話継続
 - 既存の人間向け `chat_*.txt` テキストログ出力
 
@@ -59,5 +60,6 @@ dotnet test AiChatCLI.sln
 - `ChatLoop` は REPL 入出力だけを担い、1 ターンの処理は `ChatTurnPipeline` に集約されています
 - `ConversationCodec` は live 会話と thread replay の message / tool-call 変換を共通化します
 - `OpenAIAgentFactory` は親 agent とサブエージェント用 agent のツール登録を分け、サブ側から `sub_agent` を呼べないようにしています
+- `SkillCatalog` / `SkillPromptAugmenter` は `skills/*/SKILL.md` から name / description を prompt へ注入し、本文は `skill` ツール呼び出し時だけ返します
 - `ThreadSessionManager` は current thread の切り替えと replay を担い、append-only の event 書き込みは `ThreadRecorder` に寄せています
 - `tests/AiChatCLI.Tests/` には path 解決、slash command 出力、thread projector、conversation codec の focused test を置いています

@@ -12,7 +12,8 @@ internal sealed class AgentToolCatalog
                 SubAgentTools.FunctionName,
                 TavilySearchTools.BaseToolName,
                 FileReadTools.BaseToolName,
-                CommandTools.BaseToolName
+                CommandTools.BaseToolName,
+                SkillTools.BaseToolName
             ],
             StringComparer.OrdinalIgnoreCase);
 
@@ -63,6 +64,15 @@ internal sealed class AgentToolCatalog
             CommandTools.BaseToolName,
             commandTools.commandFunctionContract,
             commandTools.commandWrapper,
+            AgentToolScope.MainAndSubAgent));
+    }
+
+    public void RegisterSkillTool(SkillTools skillTools)
+    {
+        Register(new AgentToolDescriptor(
+            SkillTools.BaseToolName,
+            skillTools.skillFunctionContract,
+            skillTools.skillWrapper,
             AgentToolScope.MainAndSubAgent));
     }
 
