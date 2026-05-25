@@ -5,7 +5,11 @@
   "agents": {
     "default": {
       "prompt": "You are a helpful assistant.",
-      "tools": ["memory", "sub_agent", "command", "read_file"]
+      "tools": ["memory", "sub_agent", "command", "read_file", "search"]
+    },
+    "web": {
+      "prompt": "You are a web search assistant. You can use the `search` tool to search the web.",
+      "tools": ["memory", "command", "search"]
     },
     "translator": {
       "prompt": "You are a professional translator. Translate the user's input accurately into Japanese.",

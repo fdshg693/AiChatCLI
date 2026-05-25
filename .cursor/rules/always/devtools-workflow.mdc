@@ -1,20 +1,51 @@
 ---
-description: Workflow tool architecture and conventions
+description: Workflow tool map, exploration shortcuts, and conventions
 globs: devtools/workflow/**
 alwaysApply: false
 ---
 # Cursor Workflow
 
-- `devtools/workflow/` contains the Python CLI that runs `cursor-agent` in multiple steps and stores outputs under `runs/`.
-- The main package lives in `src/workflow_cli/`.
-- Workflow definitions live in `workflows/`, and task-specific prompts live in `prompt_configs/`.
+- `devtools/workflow/` is a Python workflow runner that executes `cursor-agent` in multiple steps and stores artifacts under `runs/`.
+- Keep this tool independent from the .NET app in `src/AiChatCLI/`; do not move workflow logic into the app project.
+- Use the workflow docs as the first human-facing map:
+  - `devtools/workflow/README.md`: thin entry point and quick start
+  - `devtools/workflow/docs/usage.md`: daily commands and run patterns
+  - `devtools/workflow/docs/customization.md`: JSON/YAML schema, merge rules, and overrides
+  - `devtools/workflow/docs/architecture.md`: module responsibilities and runtime flow
+
+## Fast Repository Map
+
+- `src/workflow_cli/cli.py`: CLI entry point, subcommands, and argument parsing
+- `src/workflow_cli/workflow_loader.py`: resolves `extends` / `compose` and merges workflow JSON
+- `src/workflow_cli/prompt_config.py`: loads prompt YAML and overlays prompts / variables
+- `src/workflow_cli/options.py`: supported Cursor CLI options and invocation argument mapping
+- `src/workflow_cli/step_support.py`: builds variables, resolves paths, output files, and resume state
+- `src/workflow_cli/runtime.py`: main step execution loop
+- `src/workflow_cli/cursor_cli.py`: subprocess invocation layer; inspect here for execution behavior
+- `src/workflow_cli/cursor_output.py`: extracts `chat_id` from JSON outputs
+- `src/workflow_cli/artifacts.py`: writes stdout, stderr, and metadata files
+- `src/workflow_cli/validation.py`: validate-only checks and option constraints
+- `workflows/*.json`: reusable workflow archetypes and fragments
+- `prompt_configs/*.yaml`: task-specific prompts and variables
+- `tests/`: focused coverage for loader, templating, and validation
+
+## Exploration Shortcuts
+
+- If the question is "how do I run this?", start with `devtools/workflow/docs/usage.md` and `src/workflow_cli/cli.py`.
+- If the question is "where should this config live?", start with `devtools/workflow/docs/customization.md`, then inspect `workflows/` and `prompt_configs/`.
+- If the question is "why did this merge / override happen?", inspect `src/workflow_cli/workflow_loader.py`, `src/workflow_cli/prompt_config.py`, and `src/workflow_cli/models.py`.
+- If the question is "why did this step run with these flags?", inspect `src/workflow_cli/options.py`, `src/workflow_cli/step_support.py`, and `src/workflow_cli/runtime.py`.
+- If the question is "where did this output file path come from?", inspect `src/workflow_cli/step_support.py` and `src/workflow_cli/artifacts.py`.
+- If the question is "why did resume fail or chat continuity break?", inspect `src/workflow_cli/cursor_output.py`, `src/workflow_cli/step_support.py`, and `src/workflow_cli/runtime.py`.
+- If the question is "what should I test?", inspect `tests/test_workflow_loader.py` and `tests/test_templating_and_validation.py` first.
 
 ## Conventions
 
-- Keep the workflow tool independent from the .NET app; do not embed the Python runner into `src/AiChatCLI/`.
-- App runtime details such as `AppPaths`, `ChatTurnPipeline`, `ConversationCodec`, `ThreadRecorder`, thread replay, chat logging, and slash-command behavior belong in the app docs under `src/AiChatCLI/README.md` and `src/AiChatCLI/docs/`; keep workflow docs focused on the Python runner itself.
-- Prefer reusable `extends` and `compose` fragments for shared step structure.
-- Keep task-specific prompt text and variables in `prompt_configs/*.yaml`.
-- Paths in workflow JSON are resolved relative to the file that defines them.
+- Keep app runtime details such as `AppPaths`, `ChatTurnPipeline`, `ConversationCodec`, `ThreadRecorder`, thread replay, chat logging, and slash-command behavior in the app docs under `src/AiChatCLI/`; do not duplicate them here.
+- Prefer reusable `extends` and `compose` fragments for shared step structure instead of copying large step arrays.
+- Keep task-specific prompt text and variables in `prompt_configs/*.yaml`; keep shared structure in `workflows/*.json`.
+- Paths in workflow JSON are resolved relative to the file that defines them, not relative to the current shell directory.
+- Output paths are generated automatically under `runs/`; do not reintroduce manual `output_file` config.
 - On Windows, prefer argument-array process execution over shell-built command strings.
-- When workflow archetypes, sample commands, or prompt-config examples change, update `devtools/workflow/README.md` in the same task.
+- When workflow archetypes, sample commands, prompt-config examples, or architecture descriptions change, update the matching workflow docs in the same task.
+- When changing execution, merging, templating, or validation behavior, update or add focused tests in `devtools/workflow/tests/` when it materially reduces regression risk.

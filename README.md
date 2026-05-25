@@ -16,7 +16,10 @@ CLI から AI と対話する .NET アプリと、その開発を支援する Cu
 - アプリ設定ガイド: [`src/AiChatCLI/docs/configuration.md`](src/AiChatCLI/docs/configuration.md)
 - アプリ開発ガイド: [`src/AiChatCLI/docs/development.md`](src/AiChatCLI/docs/development.md)
 - アプリ早見表: [`src/AiChatCLI/docs/reference.md`](src/AiChatCLI/docs/reference.md)
-- workflow のセットアップと実行方法: [`devtools/workflow/README.md`](devtools/workflow/README.md)
+- workflow の入口: [`devtools/workflow/README.md`](devtools/workflow/README.md)
+- workflow の日常利用ガイド: [`devtools/workflow/docs/usage.md`](devtools/workflow/docs/usage.md)
+- workflow の設定・カスタマイズ: [`devtools/workflow/docs/customization.md`](devtools/workflow/docs/customization.md)
+- workflow の実装概要: [`devtools/workflow/docs/architecture.md`](devtools/workflow/docs/architecture.md)
 - CLI セッションラッパーの使い方: [`devtools/cli-session/README.md`](devtools/cli-session/README.md)
 - AI 向けの恒久ルール: `.cursor/rules/always/*.mdc`
 
