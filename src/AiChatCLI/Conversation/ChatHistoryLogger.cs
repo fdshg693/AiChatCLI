@@ -1,14 +1,7 @@
-using System.Text.Json;
-
 namespace AiChatCLI;
 
 internal sealed class ChatHistoryLogger : IDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     private readonly StreamWriter? _writer;
     private readonly object _lock = new();
 
@@ -40,108 +33,103 @@ internal sealed class ChatHistoryLogger : IDisposable
 
     public bool IsEnabled => _writer is not null;
 
-    public void LogSessionStart(string modelName, string agentName)
+    public void LogSessionStart(string modelName, string agentName, string? threadId, DateTimeOffset? timestamp = null)
     {
-        WriteLine($"[{Timestamp()}] [SESSION] start model={modelName} agent={NormalizeAgentName(agentName)}");
+        WriteLine($"[{Timestamp(timestamp)}] [SESSION] start model={modelName} agent={NormalizeAgentName(agentName)} thread={NormalizeThreadId(threadId)}");
     }
 
-    public void LogSessionEnd()
+    public void LogSessionEnd(string agentName, string? threadId, string reason, DateTimeOffset? timestamp = null)
     {
-        WriteLine($"[{Timestamp()}] [SESSION] end");
+        WriteLine($"[{Timestamp(timestamp)}] [SESSION] end agent={NormalizeAgentName(agentName)} thread={NormalizeThreadId(threadId)} reason={reason}");
     }
 
-    public void LogUserInput(string rawLine, string agentName)
+    public void LogUserInput(string rawLine, string agentName, DateTimeOffset? timestamp = null)
     {
-        WriteLine($"[{Timestamp()}] [USER] agent={NormalizeAgentName(agentName)} {rawLine}");
+        WriteLine($"[{Timestamp(timestamp)}] [USER] agent={NormalizeAgentName(agentName)} {rawLine}");
     }
 
-    public void LogPromptTransformation(string rawInput, string processedText, string agentName)
+    public void LogPromptTransformation(string rawInput, string processedText, string agentName, DateTimeOffset? timestamp = null)
     {
-        WriteTaggedLines("TRANSFORM_RAW", rawInput, agentName);
+        WriteTaggedLines("TRANSFORM_RAW", rawInput, agentName, timestamp);
         if (string.Equals(rawInput, processedText, StringComparison.Ordinal))
         {
-            WriteLine($"[{Timestamp()}] [TRANSFORM] agent={NormalizeAgentName(agentName)} 変換なし");
+            WriteLine($"[{Timestamp(timestamp)}] [TRANSFORM] agent={NormalizeAgentName(agentName)} 変換なし");
             return;
         }
 
-        WriteTaggedLines("TRANSFORM_FINAL", processedText, agentName);
+        WriteTaggedLines("TRANSFORM_FINAL", processedText, agentName, timestamp);
     }
 
-    public void LogMessageSentToModel(string processedText, string agentName)
+    public void LogMessageSentToModel(string processedText, string agentName, DateTimeOffset? timestamp = null)
     {
-        WriteTaggedLines("REQUEST", processedText, agentName);
+        WriteTaggedLines("REQUEST", processedText, agentName, timestamp);
     }
 
-    public void LogAiReply(string reply, string agentName)
+    public void LogAiReply(string reply, string agentName, DateTimeOffset? timestamp = null)
     {
-        WriteTaggedLines("AI", reply, agentName);
+        WriteTaggedLines("AI", reply, agentName, timestamp);
     }
 
-    public void LogToolExecutions(IEnumerable<ToolExecutionRecord> toolExecutions, string agentName)
+    public void LogToolExecutions(IEnumerable<ToolExecutionRecord> toolExecutions, string agentName, DateTimeOffset? timestamp = null)
     {
         foreach (var toolExecution in toolExecutions)
         {
-            WriteLine($"[{Timestamp()}] [TOOL] agent={NormalizeAgentName(agentName)} name={toolExecution.FunctionName} id={toolExecution.ToolCallId ?? string.Empty}");
-            WriteTaggedLines("TOOL_ARGS", toolExecution.FunctionArguments, agentName);
-            WriteTaggedLines("TOOL_RESULT", toolExecution.Result, agentName);
-            LogSubAgentInvocation(toolExecution, agentName);
+            WriteLine($"[{Timestamp(timestamp)}] [TOOL] agent={NormalizeAgentName(agentName)} name={toolExecution.FunctionName} id={toolExecution.ToolCallId ?? string.Empty}");
+            WriteTaggedLines("TOOL_ARGS", toolExecution.FunctionArguments, agentName, timestamp);
+            WriteTaggedLines("TOOL_RESULT", toolExecution.Result, agentName, timestamp);
+            LogSubAgentInvocation(toolExecution, agentName, timestamp);
         }
     }
 
-    public void LogSlashCommand(string rawLine, string capturedConsoleOutput, string agentName)
+    public void LogSlashCommand(string rawLine, string capturedConsoleOutput, string agentName, DateTimeOffset? timestamp = null)
     {
-        WriteLine($"[{Timestamp()}] [SLASH] agent={NormalizeAgentName(agentName)} {rawLine}");
+        WriteLine($"[{Timestamp(timestamp)}] [SLASH] agent={NormalizeAgentName(agentName)} {rawLine}");
         if (string.IsNullOrEmpty(capturedConsoleOutput))
             return;
 
         var normalized = capturedConsoleOutput.Replace("\r\n", "\n", StringComparison.Ordinal);
         foreach (var line in normalized.Split('\n', StringSplitOptions.None))
         {
-            WriteLine($"[{Timestamp()}] [SLASH_OUT] agent={NormalizeAgentName(agentName)} {line}");
+            WriteLine($"[{Timestamp(timestamp)}] [SLASH_OUT] agent={NormalizeAgentName(agentName)} {line}");
         }
     }
 
-    private void WriteTaggedLines(string tag, string? text, string agentName)
+    public void LogAgentChanged(string agentName, string reason, string? threadId, DateTimeOffset? timestamp = null)
+    {
+        WriteLine($"[{Timestamp(timestamp)}] [AGENT] agent={NormalizeAgentName(agentName)} thread={NormalizeThreadId(threadId)} reason={reason}");
+    }
+
+    public void LogThreadChanged(string threadId, string agentName, string reason, DateTimeOffset? timestamp = null)
+    {
+        WriteLine($"[{Timestamp(timestamp)}] [THREAD] agent={NormalizeAgentName(agentName)} thread={NormalizeThreadId(threadId)} reason={reason}");
+    }
+
+    private void WriteTaggedLines(string tag, string? text, string agentName, DateTimeOffset? timestamp)
     {
         var normalizedAgentName = NormalizeAgentName(agentName);
         if (string.IsNullOrEmpty(text))
         {
-            WriteLine($"[{Timestamp()}] [{tag}] agent={normalizedAgentName} ");
+            WriteLine($"[{Timestamp(timestamp)}] [{tag}] agent={normalizedAgentName} ");
             return;
         }
 
         var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         foreach (var line in normalized.Split('\n', StringSplitOptions.None))
         {
-            WriteLine($"[{Timestamp()}] [{tag}] agent={normalizedAgentName} {line}");
+            WriteLine($"[{Timestamp(timestamp)}] [{tag}] agent={normalizedAgentName} {line}");
         }
     }
 
-    private void LogSubAgentInvocation(ToolExecutionRecord toolExecution, string agentName)
+    private void LogSubAgentInvocation(ToolExecutionRecord toolExecution, string agentName, DateTimeOffset? timestamp)
     {
         if (!string.Equals(toolExecution.FunctionName, SubAgentTools.FunctionName, StringComparison.Ordinal))
             return;
 
-        var response = TryReadSubAgentResponse(toolExecution.Result);
+        var response = SubAgentToolResponseParser.TryParse(toolExecution.Result);
         if (string.IsNullOrWhiteSpace(response?.SubAgentThreadId))
             return;
 
-        WriteLine($"[{Timestamp()}] [SUBAGENT] agent={NormalizeAgentName(agentName)} thread={response.SubAgentThreadId} id={toolExecution.ToolCallId ?? string.Empty}");
-    }
-
-    private static SubAgentToolResponse? TryReadSubAgentResponse(string? result)
-    {
-        if (string.IsNullOrWhiteSpace(result))
-            return null;
-
-        try
-        {
-            return JsonSerializer.Deserialize<SubAgentToolResponse>(result, JsonOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        WriteLine($"[{Timestamp(timestamp)}] [SUBAGENT] agent={NormalizeAgentName(agentName)} thread={response.SubAgentThreadId} id={toolExecution.ToolCallId ?? string.Empty}");
     }
 
     private static StreamWriter CreateLogWriter(string path) =>
@@ -161,10 +149,16 @@ internal sealed class ChatHistoryLogger : IDisposable
         }
     }
 
-    private static string Timestamp() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+    private static string Timestamp(DateTimeOffset? timestamp = null) =>
+        (timestamp ?? DateTimeOffset.UtcNow)
+        .ToLocalTime()
+        .ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
 
     private static string NormalizeAgentName(string agentName) =>
         string.IsNullOrWhiteSpace(agentName) ? "default" : agentName.Trim();
+
+    private static string NormalizeThreadId(string? threadId) =>
+        string.IsNullOrWhiteSpace(threadId) ? "-" : threadId.Trim();
 
     public void Dispose()
     {

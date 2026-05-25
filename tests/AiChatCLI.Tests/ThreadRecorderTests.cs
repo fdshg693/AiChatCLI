@@ -41,6 +41,38 @@ public sealed class ThreadRecorderTests : IDisposable
         Assert.Equal("default", subAgentEvent.AgentName);
     }
 
+    [Fact]
+    public void RecordSlashCommand_SplitsMultilineOutputIntoOrderedEvents()
+    {
+        var repository = new ThreadRepository(Path.Combine(_tempRoot, "threads"));
+        var recorder = new ThreadRecorder(repository, new ConversationCodec(), "session_1");
+        var threadId = repository.CreateThread("gpt-4o-mini", "default", "main prompt");
+
+        recorder.RecordSlashCommand(threadId, "default", "/status", "line1\r\nline2");
+
+        var slashEvents = repository.ReadEvents(threadId)
+            .Where(threadEvent => threadEvent.Type.StartsWith("slash_command", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Collection(
+            slashEvents,
+            threadEvent =>
+            {
+                Assert.Equal("slash_command", threadEvent.Type);
+                Assert.Equal("/status", threadEvent.RawInput);
+            },
+            threadEvent =>
+            {
+                Assert.Equal("slash_command_output", threadEvent.Type);
+                Assert.Equal("line1", threadEvent.Content);
+            },
+            threadEvent =>
+            {
+                Assert.Equal("slash_command_output", threadEvent.Type);
+                Assert.Equal("line2", threadEvent.Content);
+            });
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))

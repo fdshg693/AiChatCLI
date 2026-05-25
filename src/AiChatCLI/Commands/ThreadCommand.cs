@@ -17,10 +17,12 @@ internal sealed class ThreadCommand : ISlashCommand
     ];
 
     private readonly ThreadSessionManager _threadSessionManager;
+    private readonly IChatTraceRecorder _chatTraceRecorder;
 
-    public ThreadCommand(ThreadSessionManager threadSessionManager)
+    public ThreadCommand(ThreadSessionManager threadSessionManager, IChatTraceRecorder chatTraceRecorder)
     {
         _threadSessionManager = threadSessionManager;
+        _chatTraceRecorder = chatTraceRecorder;
     }
 
     public string Name => "thread";
@@ -136,9 +138,14 @@ internal sealed class ThreadCommand : ISlashCommand
             return;
         }
 
-        output.WriteLine(alreadyCurrent
-            ? $"既にスレッド '{summary!.ThreadId}' を使用中です。"
-            : $"スレッド '{summary!.ThreadId}' に切り替えました。");
+        if (alreadyCurrent)
+        {
+            output.WriteLine($"既にスレッド '{summary!.ThreadId}' を使用中です。");
+            return;
+        }
+
+        _chatTraceRecorder.RecordThreadChanged(summary!.ThreadId, summary.CurrentAgentName, "thread_use");
+        output.WriteLine($"スレッド '{summary.ThreadId}' に切り替えました。");
     }
 
     private void CreateThread(TextWriter output)
@@ -149,6 +156,7 @@ internal sealed class ThreadCommand : ISlashCommand
             return;
         }
 
+        _chatTraceRecorder.RecordThreadChanged(summary!.ThreadId, summary.CurrentAgentName, "thread_new");
         output.WriteLine($"新しいスレッド '{summary!.ThreadId}' に切り替えました。");
     }
 }

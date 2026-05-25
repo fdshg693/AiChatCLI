@@ -2,9 +2,10 @@ namespace AiChatCLI;
 
 internal sealed class AppPaths
 {
-    public const string DefaultAppSettingsFileName = "appsettings.json";
     public const string DefaultLocalAppSettingsFileName = "appsettings.local.json";
     public const string DefaultLocalAppSettingsExampleFileName = "appsettings.local.example.json";
+    public const string DefaultSettingsDirectoryName = ".ai_chat";
+    public const string DefaultSettingsFileName = "settings.json";
     public const string DefaultAgentsFileName = "agents.json";
     public const string DefaultMemoryFileName = "memory.json";
     public const string DefaultPromptsFileName = "prompts.json";
@@ -13,57 +14,67 @@ internal sealed class AppPaths
     public const string DefaultThreadsDirectoryName = "threads";
     public const string DefaultSubAgentThreadsDirectoryName = "subagents";
 
-    private AppPaths(string contentRoot)
+    private AppPaths(string projectRoot, string repoRoot)
     {
-        ContentRoot = contentRoot;
+        ProjectRoot = Path.GetFullPath(projectRoot);
+        RepoRoot = Path.GetFullPath(repoRoot);
     }
 
-    public string ContentRoot { get; }
+    public string ContentRoot => ProjectRoot;
 
-    public string AppSettingsPath => ResolveConfiguredPath(null, DefaultAppSettingsFileName);
+    public string ProjectRoot { get; }
 
-    public string LocalAppSettingsPath => ResolveConfiguredPath(null, DefaultLocalAppSettingsFileName);
+    public string RepoRoot { get; }
 
-    public string AgentsPath => ResolveConfiguredPath(null, DefaultAgentsFileName);
+    public string SettingsDirectoryPath => Path.GetFullPath(Path.Combine(RepoRoot, DefaultSettingsDirectoryName));
 
-    public string MemoryPath => ResolveConfiguredPath(null, DefaultMemoryFileName);
+    public string SettingsBaseDirectoryPath => SettingsDirectoryPath;
 
-    public string PromptsPath => ResolveConfiguredPath(null, DefaultPromptsFileName);
+    public string SettingsPath => Path.GetFullPath(Path.Combine(SettingsDirectoryPath, DefaultSettingsFileName));
 
-    public string DefaultChatHistoryDirectory => ResolveConfiguredPath(null, DefaultChatHistoryDirectoryName);
+    public string LocalAppSettingsPath => Path.GetFullPath(Path.Combine(ProjectRoot, DefaultLocalAppSettingsFileName));
 
     public static AppPaths Discover(
         string markerFileName,
         string? startDirectory = null,
         string? fallbackDirectory = null)
     {
-        var contentRoot = TryFindContentRoot(markerFileName, startDirectory)
+        var projectRoot = TryFindProjectRoot(markerFileName, startDirectory)
             ?? Path.GetFullPath(fallbackDirectory ?? Directory.GetCurrentDirectory());
+        var repoRoot = TryFindRepoRoot(projectRoot)
+            ?? TryGetConventionalRepoRoot(projectRoot)
+            ?? projectRoot;
 
-        return new AppPaths(contentRoot);
+        return new AppPaths(projectRoot, repoRoot);
     }
 
-    public string ResolveConfiguredPath(string? configuredPath, string defaultRelativePath)
+    public string ResolveConfiguredSettingsPath(string? configuredPath, string defaultRelativePath)
     {
         var candidate = string.IsNullOrWhiteSpace(configuredPath)
             ? defaultRelativePath
             : configuredPath.Trim();
 
-        return ResolvePath(candidate);
+        return ResolveSettingsPath(candidate);
     }
 
-    public string ResolvePath(string path)
+    public string ResolveProjectPath(string path) =>
+        ResolvePath(path, ProjectRoot, nameof(path));
+
+    public string ResolveSettingsPath(string path) =>
+        ResolvePath(path, SettingsBaseDirectoryPath, nameof(path));
+
+    private static string ResolvePath(string path, string baseDirectoryPath, string paramName)
     {
         if (string.IsNullOrWhiteSpace(path))
-            throw new ArgumentException("path を指定してください。", nameof(path));
+            throw new ArgumentException("path を指定してください。", paramName);
 
         var trimmed = path.Trim();
         return Path.IsPathRooted(trimmed)
             ? Path.GetFullPath(trimmed)
-            : Path.GetFullPath(Path.Combine(ContentRoot, trimmed));
+            : Path.GetFullPath(Path.Combine(baseDirectoryPath, trimmed));
     }
 
-    private static string? TryFindContentRoot(string markerFileName, string? startDirectory)
+    private static string? TryFindProjectRoot(string markerFileName, string? startDirectory)
     {
         var current = new DirectoryInfo(Path.GetFullPath(startDirectory ?? AppContext.BaseDirectory));
         while (current is not null)
@@ -75,5 +86,37 @@ internal sealed class AppPaths
         }
 
         return null;
+    }
+
+    private static string? TryFindRepoRoot(string projectRoot)
+    {
+        var current = new DirectoryInfo(Path.GetFullPath(projectRoot));
+        while (current is not null)
+        {
+            var gitPath = Path.Combine(current.FullName, ".git");
+            var settingsPath = Path.Combine(
+                current.FullName,
+                DefaultSettingsDirectoryName,
+                DefaultSettingsFileName);
+            if (Directory.Exists(gitPath) || File.Exists(gitPath) || File.Exists(settingsPath))
+                return current.FullName;
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
+
+    private static string? TryGetConventionalRepoRoot(string projectRoot)
+    {
+        var current = new DirectoryInfo(Path.GetFullPath(projectRoot));
+        if (current.Parent is null ||
+            !string.Equals(current.Parent.Name, "src", StringComparison.OrdinalIgnoreCase) ||
+            current.Parent.Parent is null)
+        {
+            return null;
+        }
+
+        return current.Parent.Parent.FullName;
     }
 }

@@ -18,6 +18,9 @@ internal class StatusCommand : ISlashCommand
     private readonly AgentSelection _agentSelection;
     private readonly ThreadSessionManager _threadSessionManager;
     private readonly AgentToolCatalog _toolCatalog;
+    private readonly bool _transcriptLoggingEnabled;
+    private readonly bool _threadLoggingEnabled;
+    private readonly bool _subAgentThreadLoggingEnabled;
 
     public StatusCommand(
         string modelName,
@@ -27,7 +30,10 @@ internal class StatusCommand : ISlashCommand
         AgentCatalog agentCatalog,
         AgentSelection agentSelection,
         ThreadSessionManager threadSessionManager,
-        AgentToolCatalog toolCatalog)
+        AgentToolCatalog toolCatalog,
+        bool transcriptLoggingEnabled,
+        bool threadLoggingEnabled,
+        bool subAgentThreadLoggingEnabled)
     {
         _modelName = modelName;
         _templatesPath = templatesPath;
@@ -37,6 +43,9 @@ internal class StatusCommand : ISlashCommand
         _agentSelection = agentSelection;
         _threadSessionManager = threadSessionManager;
         _toolCatalog = toolCatalog;
+        _transcriptLoggingEnabled = transcriptLoggingEnabled;
+        _threadLoggingEnabled = threadLoggingEnabled;
+        _subAgentThreadLoggingEnabled = subAgentThreadLoggingEnabled;
     }
 
     public string Name => "status";
@@ -59,6 +68,9 @@ internal class StatusCommand : ISlashCommand
         output.WriteLine($"memory 件数: {_memoryStore.EntryCount}");
         output.WriteLine($"利用可能 tool (current agent): {FormatTools(_toolCatalog.GetEnabledToolNames(_agentSelection.CurrentTools, AgentToolConsumer.MainAgent))}");
         output.WriteLine($"利用可能 tool (current sub-agent): {FormatTools(_toolCatalog.GetEnabledToolNames(_agentSelection.CurrentTools, AgentToolConsumer.SubAgent))}");
+        output.WriteLine($"transcript logging: {FormatEnabled(_transcriptLoggingEnabled)}");
+        output.WriteLine($"thread logging: {FormatEnabled(_threadLoggingEnabled)}");
+        output.WriteLine($"sub-agent thread logging: {FormatEnabled(_subAgentThreadLoggingEnabled)}");
         output.WriteLine($"現在の thread: {_threadSessionManager.CurrentThreadId ?? "(未作成/無効)"}");
         output.WriteLine($"template 定義ファイル: {_templatesPath}");
         output.WriteLine($"agent 定義ファイル: {_agentCatalog.SourcePath}");
@@ -68,4 +80,6 @@ internal class StatusCommand : ISlashCommand
 
     private static string FormatTools(IReadOnlyList<string> tools) =>
         tools.Count == 0 ? "(なし)" : string.Join(", ", tools);
+
+    private static string FormatEnabled(bool value) => value ? "enabled" : "disabled";
 }

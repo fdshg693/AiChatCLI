@@ -40,7 +40,6 @@ internal sealed class AppComposition : IDisposable
             var config = new AppConfig(paths);
             var sessionWorkingDirectory = new SessionWorkingDirectory();
             var textFileReader = new TextFileReader();
-            var skillsDirectoryPath = paths.ResolveConfiguredPath(null, AppPaths.DefaultSkillsDirectoryName);
             var agentCatalog = new AgentCatalog(
                 config.AgentsPath,
                 AgentBuiltInPlaceholders.CreateResolver(sessionWorkingDirectory),
@@ -53,7 +52,7 @@ internal sealed class AppComposition : IDisposable
             var commandTools = new CommandTools(
                 new ConsoleCommandApprovalPrompt(),
                 new LocalCommandExecutor());
-            var skillCatalog = new SkillCatalog(skillsDirectoryPath, textFileReader);
+            var skillCatalog = new SkillCatalog(config.SkillsDirectoryPath, textFileReader);
             var skillPromptAugmenter = new SkillPromptAugmenter(skillCatalog);
             var toolCatalog = new AgentToolCatalog();
             toolCatalog.RegisterMemoryTool(memoryTools);
@@ -83,7 +82,7 @@ internal sealed class AppComposition : IDisposable
                 config.Model,
                 toolCatalog,
                 skillPromptAugmenter);
-            var subAgentRepository = config.ChatHistoryEnabled
+            var subAgentRepository = config.SubAgentThreadLoggingEnabled
                 ? ThreadRepository.CreateSubAgentRepository(config.SubAgentThreadsDirectoryPath)
                 : null;
             var subAgentRunner = new SubAgentRunner(
@@ -107,12 +106,14 @@ internal sealed class AppComposition : IDisposable
             var templateProcessor = new PromptTemplateProcessor(templateManager, config.MaxTemplateDepth);
             var promptReader = new InteractivePromptReader(templateManager);
             threadSessionManager = new ThreadSessionManager(
-                config.ChatHistoryEnabled,
+                config.ThreadLoggingEnabled,
                 config.ThreadsDirectoryPath,
                 config.Model,
                 chatService,
                 agentSelection,
                 conversationCodec);
+            chatHistory = new ChatHistoryLogger(config.TranscriptLoggingEnabled, config.ChatHistoryDirectoryPath);
+            var chatTraceRecorder = new ChatTraceRecorder(chatHistory, threadSessionManager);
 
             var slashCommandHandler = new SlashCommandHandler();
             slashCommandHandler.Register(new StatusCommand(
@@ -123,28 +124,29 @@ internal sealed class AppComposition : IDisposable
                 agentCatalog,
                 agentSelection,
                 threadSessionManager,
-                toolCatalog));
+                toolCatalog,
+                config.TranscriptLoggingEnabled,
+                config.ThreadLoggingEnabled,
+                config.SubAgentThreadLoggingEnabled));
             slashCommandHandler.Register(new AgentCommand(
                 agentCatalog,
                 agentSelection,
                 chatService,
-                threadSessionManager));
-            slashCommandHandler.Register(new ThreadCommand(threadSessionManager));
+                chatTraceRecorder));
+            slashCommandHandler.Register(new ThreadCommand(threadSessionManager, chatTraceRecorder));
             slashCommandHandler.Register(new PromptCommand(
                 templateManager));
             slashCommandHandler.Register(new HelpCommand(slashCommandHandler));
 
-            chatHistory = new ChatHistoryLogger(config.ChatHistoryEnabled, config.ChatHistoryDirectoryPath);
             var chatTurnPipeline = new ChatTurnPipeline(
                 chatService,
                 agentSelection,
                 templateProcessor,
                 slashCommandHandler,
-                chatHistory,
-                threadSessionManager);
+                chatTraceRecorder);
             var chatLoop = new ChatLoop(
                 agentSelection,
-                chatHistory,
+                chatTraceRecorder,
                 promptReader,
                 chatTurnPipeline);
 

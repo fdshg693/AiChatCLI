@@ -7,7 +7,8 @@
 1. `appsettings.local.example.json` を `appsettings.local.json` にコピーします
 2. `appsettings.local.json` の `OpenAI:ApiKey` に API キーを設定します
 3. Tavily 検索を使う場合は `Tavily:ApiKey` も設定します
-4. `appsettings.local.json` は `.gitignore` 済みで Git 管理しません
+4. `.ai_chat/settings.json` でモデル、各種 `Paths:*`、ログ設定を確認します
+5. `appsettings.local.json` は `.gitignore` 済みで Git 管理しません
 
 ```bash
 dotnet build
@@ -20,19 +21,22 @@ dotnet run --project src/AiChatCLI/AiChatCLI.csproj
 dotnet test AiChatCLI.sln
 ```
 
-## 設定の読み込み順
+## 設定の読み分け
 
-設定は次の順で読み込まれ、後ろのものが前を上書きします。
+設定は用途ごとに分離しています。
 
-1. `appsettings.json`
-2. `appsettings.local.json`
-3. 環境変数
+- 非秘密設定: repo root の `.ai_chat/settings.json` を読み、必要なら環境変数で上書きします
+- 秘密情報: `appsettings.local.json` を読み、必要なら環境変数で上書きします
+- `src/AiChatCLI/appsettings.json` は runtime 設定ソースとしては使いません
 
 代表例:
 
 - `OPENAI_API_KEY`
 - `TAVILY_API_KEY`
 - `ChatHistory__Enabled`
+- `Logging__TranscriptEnabled`
+- `Logging__ThreadEnabled`
+- `Logging__SubAgentThreadEnabled`
 - `Paths__ChatHistoryDirectory`
 
 ## 主な設定項目
@@ -43,29 +47,45 @@ dotnet test AiChatCLI.sln
 | Tavily API キー | `Tavily:ApiKey` または `TAVILY_API_KEY` | 未設定 |
 | モデル | `OpenAI:Model` | `gpt-4o-mini` |
 | テンプレート展開の最大深度 | `Template:MaxDepth` | `10` |
-| 会話ログの有効化 | `ChatHistory:Enabled` | `true` |
+| transcript の既定有効化 | `ChatHistory:Enabled` | `true` |
+| transcript の有効化 | `Logging:TranscriptEnabled` | 未設定時は `ChatHistory:Enabled` を継承 |
+| thread ログの有効化 | `Logging:ThreadEnabled` | 未設定時は `ChatHistory:Enabled` を継承 |
+| sub-agent thread ログの有効化 | `Logging:SubAgentThreadEnabled` | 未設定時は `Logging:ThreadEnabled` を継承 |
 | agent 定義ファイル | `Paths:Agents` | `agents.json` |
 | テンプレート定義ファイル | `Paths:Prompts` | `prompts.json` |
 | メモリ保存ファイル | `Paths:Memory` | `memory.json` |
+| skill ルートディレクトリ | `Paths:SkillsDirectory` | `skills` |
 | 会話ログの保存ディレクトリ | `Paths:ChatHistoryDirectory` | `logs` |
 | thread ログの保存ディレクトリ | `Paths:ThreadsDirectory` | 未設定時は `<ChatHistoryDirectory>/threads` |
 | sub-agent thread ログの保存ディレクトリ | `Paths:SubAgentThreadsDirectory` | 未設定時は `<ThreadsDirectory>/subagents` |
 
+## Logging フラグ
+
+ログの永続化は用途ごとに個別制御できます。
+
+- `Logging:TranscriptEnabled`: 人間向けの `chat_*.txt` transcript を保存します
+- `Logging:ThreadEnabled`: main thread の JSONL と `/thread` replay を有効にします
+- `Logging:SubAgentThreadEnabled`: sub-agent 用 JSONL を有効にします
+- 旧 `ChatHistory:Enabled` は互換用の親フラグで、新しい `Logging:*Enabled` が未設定のときの既定値として使われます
+- `Logging:ThreadEnabled=false` の場合、`/thread` コマンドと current thread の自動作成は無効です
+- `Paths:ChatHistoryDirectory` は transcript 保存先であると同時に、`Paths:ThreadsDirectory` 未設定時の基底ディレクトリでもあります
+
 ## パス解決の考え方
 
-- `Paths:*` に相対パスを指定した場合は `appsettings.json` と同じ基準ディレクトリから解決されます
-- `ChatHistory:Directory` も互換性のため読み取りますが、`Paths:ChatHistoryDirectory` が優先されます
+- `Paths:*` に相対パスを指定した場合は `.ai_chat/settings.json` が置かれたディレクトリから解決されます
 - `ThreadsDirectory` が未設定なら `<ChatHistoryDirectory>/threads` を使います
 - `SubAgentThreadsDirectory` が未設定なら `<ThreadsDirectory>/subagents` を使います
+- このリポジトリ同梱の `.ai_chat/settings.json` では、`agents.json` / `prompts.json` は `src/AiChatCLI/` を参照し、`SkillsDirectory` は `.cursor/skills` を参照します
 
 例:
 
 ```json
 {
   "Paths": {
-    "Agents": "config/agents.json",
-    "Prompts": "config/prompts.json",
+    "Agents": "../src/AiChatCLI/agents.json",
+    "Prompts": "../src/AiChatCLI/prompts.json",
     "Memory": "state/memory.json",
+    "SkillsDirectory": "../.cursor/skills",
     "ChatHistoryDirectory": "artifacts/logs",
     "ThreadsDirectory": "artifacts/threads",
     "SubAgentThreadsDirectory": "artifacts/threads/subagents"
@@ -75,13 +95,13 @@ dotnet test AiChatCLI.sln
 
 ## agent ごとの tool 定義
 
-利用可能な tool は `appsettings.local.json` ではなく `agents.json` で agent ごとに定義します。
+利用可能な tool は `appsettings.local.json` ではなく `Paths:Agents` で指定した agent 定義 JSON で agent ごとに定義します。
 
 - 各 agent は `prompt` と `tools` を持つ object で表現します
 - `tools` は tool 名の配列です
 - `tools: []` にすると、その agent は tool を 1 つも公開しません
 - sub-agent は「現在の agent に許可された tool 群」を引き継ぎますが、`sub_agent` 自体は自動的に除外されます
-- `skill` を含めると、`skills/*/SKILL.md` にある skill の `name` / `description` が system prompt に追加され、本文は tool 呼び出し時だけ読み込まれます
+- `skill` を含めると、`Paths:SkillsDirectory` 配下の `SKILL.md` にある skill の `name` / `description` が system prompt に追加され、本文は tool 呼び出し時だけ読み込まれます
 - `search` をどれか 1 つでも有効にした場合は `Tavily:ApiKey` または `TAVILY_API_KEY` が必須です
 
 ```json
@@ -163,13 +183,13 @@ Tavily Search API を使う opt-in の検索ツールです。
 
 ### `skill`
 
-ローカルの `skills/*/SKILL.md` から skill 本文を遅延読み込みするツールです。
+ローカルの `Paths:SkillsDirectory` 配下の `SKILL.md` から skill 本文を遅延読み込みするツールです。
 
 - agent の `tools` に `skill` を含めたときだけ公開されます
 - system prompt には各 skill の `name` と `description` だけが追加されます
 - モデルが `skill` ツールを呼ぶと、その skill の markdown 本文、`SKILL.md` の絶対パス、skill ディレクトリの絶対パスが JSON で返ります
 - front matter は `name` と `description` だけをサポートし、それ以外のキーは未対応です
-- skill ファイルは `skills/<skill-directory>/SKILL.md` に置き、必要なら同じディレクトリへ補助リソースを置けます
+- skill ファイルは `Paths:SkillsDirectory/<skill-directory>/SKILL.md` に置き、必要なら同じディレクトリへ補助リソースを置けます
 
 ```json
 {
@@ -235,13 +255,13 @@ NO の理由 (任意): 今はテストを走らせたくない
 
 ## agent / prompt 定義ファイル
 
-- agent 定義は `agents.json` が既定です
+- agent 定義は `Paths:Agents` が既定で参照する JSON です
 - `agents.json` は `defaults` と `agents` を持つ structured schema です
 - `defaults.systemPromptPrefix` に空でない文字列を設定すると、その内容を各 agent の system prompt 先頭へ共通プレフィックスとして追加します
 - 各 `agents.<name>` は `prompt` と `tools` を持つ object です
-- prompt template 定義は `prompts.json` が既定です
+- prompt template 定義は `Paths:Prompts` が既定で参照する JSON です
 - 外部で JSON を直接編集した場合は `/agent reload` または `/prompt template reload` を実行します
-- skill 定義は `skills/*/SKILL.md` が既定で、`/agent reload` や agent 切り替え時に利用可能 skill の name / description が再評価されます
+- skill 定義は `Paths:SkillsDirectory` 配下の `SKILL.md` が対象で、`/agent reload` や agent 切り替え時に利用可能 skill の name / description が再評価されます
 
 ```json
 {
@@ -266,12 +286,21 @@ NO の理由 (任意): 今はテストを走らせたくない
 
 ## ログと履歴
 
-起動ごとに 1 ファイルのテキストログと、thread ごとの構造化ログを保存します。
+trace は `ChatTraceRecorder` から各保存先へ配信されます。起動ごとに transcript を、thread ごとに構造化ログを必要に応じて保存します。
 
-- 保存先は既定で `logs/`
-- テキストログは `chat_yyyyMMdd_HHmmss_fff.txt`
-- thread ログは `logs/threads/thread_*.jsonl`
-- サブエージェントログは `logs/threads/subagents/subagent_thread_*.jsonl`
-- `ChatHistory:Enabled` を `false` にすると thread 機能と structured thread log は無効になります
+- 保存先は既定で `.ai_chat/logs/`
+- transcript は `chat_yyyyMMdd_HHmmss_fff.txt`
+- main thread ログは `.ai_chat/logs/threads/thread_*.jsonl`
+- サブエージェントログは `.ai_chat/logs/threads/subagents/subagent_thread_*.jsonl`
+- transcript には session 開始/終了、通常会話、tool 実行、slash command 出力、agent / thread の状態変更が記録されます
+- thread JSONL は replay 正本で、通常会話に加えて slash command、session lifecycle、agent 状態変更も append-only event として保持します
+- `Logging:ThreadEnabled=false` では thread 機能と main thread JSONL は無効です
+- `Logging:SubAgentThreadEnabled=false` では sub-agent JSONL だけを停止できます
+
+| 種類 | 主な記録契機 | 用途 |
+|---|---|---|
+| transcript | REPL session 開始/終了、通常会話、slash command、agent / thread 切り替え | 人間向けの追跡とトラブルシュート |
+| main thread JSONL | user / assistant、tool call / result、slash command、session / agent lifecycle | `/thread use <id>` の replay 正本 |
+| sub-agent thread JSONL | sub-agent への prompt、tool 実行、最終応答、sub-agent session lifecycle | サブエージェント単位の再現と調査 |
 
 詳しい一覧は [`reference.md`](reference.md) を参照してください。

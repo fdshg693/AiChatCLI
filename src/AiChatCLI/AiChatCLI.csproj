@@ -20,9 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="agents.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

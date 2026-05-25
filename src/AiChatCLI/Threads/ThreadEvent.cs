@@ -22,22 +22,43 @@ internal sealed record ThreadEvent
     public string? SubAgentThreadId { get; init; }
     public string? ToolCallId { get; init; }
 
-    public static ThreadEvent ThreadCreated(string threadId, string modelName, string agentName, string systemPrompt) =>
-        Create("thread_created", threadId) with
+    public static ThreadEvent ThreadCreated(
+        string threadId,
+        string modelName,
+        string agentName,
+        string systemPrompt,
+        DateTimeOffset? timestamp = null) =>
+        Create("thread_created", threadId, timestamp) with
         {
             ModelName = modelName,
             AgentName = agentName,
             SystemPrompt = systemPrompt
         };
 
-    public static ThreadEvent SessionAttached(
+    public static ThreadEvent SessionStarted(
         string threadId,
         string sessionId,
         string modelName,
         string agentName,
         string systemPrompt,
-        string reason) =>
-        Create("session_attached", threadId) with
+        DateTimeOffset? timestamp = null) =>
+        Create("session_started", threadId, timestamp) with
+        {
+            SessionId = sessionId,
+            ModelName = modelName,
+            AgentName = agentName,
+            SystemPrompt = systemPrompt
+        };
+
+    public static ThreadEvent SessionEnded(
+        string threadId,
+        string sessionId,
+        string modelName,
+        string agentName,
+        string systemPrompt,
+        string reason,
+        DateTimeOffset? timestamp = null) =>
+        Create("session_ended", threadId, timestamp) with
         {
             SessionId = sessionId,
             ModelName = modelName,
@@ -46,8 +67,25 @@ internal sealed record ThreadEvent
             Reason = reason
         };
 
-    public static ThreadEvent SessionDetached(string threadId, string sessionId, string reason) =>
-        Create("session_detached", threadId) with
+    public static ThreadEvent SessionAttached(
+        string threadId,
+        string sessionId,
+        string modelName,
+        string agentName,
+        string systemPrompt,
+        string reason,
+        DateTimeOffset? timestamp = null) =>
+        Create("session_attached", threadId, timestamp) with
+        {
+            SessionId = sessionId,
+            ModelName = modelName,
+            AgentName = agentName,
+            SystemPrompt = systemPrompt,
+            Reason = reason
+        };
+
+    public static ThreadEvent SessionDetached(string threadId, string sessionId, string reason, DateTimeOffset? timestamp = null) =>
+        Create("session_detached", threadId, timestamp) with
         {
             SessionId = sessionId,
             Reason = reason
@@ -58,8 +96,9 @@ internal sealed record ThreadEvent
         string sessionId,
         string agentName,
         string systemPrompt,
-        string reason) =>
-        Create("agent_changed", threadId) with
+        string reason,
+        DateTimeOffset? timestamp = null) =>
+        Create("agent_changed", threadId, timestamp) with
         {
             SessionId = sessionId,
             AgentName = agentName,
@@ -67,8 +106,13 @@ internal sealed record ThreadEvent
             Reason = reason
         };
 
-    public static ThreadEvent UserMessage(string threadId, string sessionId, string agentName, string rawInput) =>
-        Create("user_message", threadId) with
+    public static ThreadEvent UserMessage(
+        string threadId,
+        string sessionId,
+        string agentName,
+        string rawInput,
+        DateTimeOffset? timestamp = null) =>
+        Create("user_message", threadId, timestamp) with
         {
             SessionId = sessionId,
             AgentName = agentName,
@@ -80,8 +124,9 @@ internal sealed record ThreadEvent
         string sessionId,
         string agentName,
         string rawInput,
-        string processedInput) =>
-        Create("prompt_transformed", threadId) with
+        string processedInput,
+        DateTimeOffset? timestamp = null) =>
+        Create("prompt_transformed", threadId, timestamp) with
         {
             SessionId = sessionId,
             AgentName = agentName,
@@ -89,20 +134,52 @@ internal sealed record ThreadEvent
             ProcessedInput = processedInput
         };
 
-    public static ThreadEvent ModelRequest(string threadId, string sessionId, string agentName, string processedInput) =>
-        Create("model_request", threadId) with
+    public static ThreadEvent ModelRequest(
+        string threadId,
+        string sessionId,
+        string agentName,
+        string processedInput,
+        DateTimeOffset? timestamp = null) =>
+        Create("model_request", threadId, timestamp) with
         {
             SessionId = sessionId,
             AgentName = agentName,
             ProcessedInput = processedInput
         };
 
+    public static ThreadEvent SlashCommand(
+        string threadId,
+        string sessionId,
+        string agentName,
+        string rawInput,
+        DateTimeOffset? timestamp = null) =>
+        Create("slash_command", threadId, timestamp) with
+        {
+            SessionId = sessionId,
+            AgentName = agentName,
+            RawInput = rawInput
+        };
+
+    public static ThreadEvent SlashCommandOutput(
+        string threadId,
+        string sessionId,
+        string agentName,
+        string content,
+        DateTimeOffset? timestamp = null) =>
+        Create("slash_command_output", threadId, timestamp) with
+        {
+            SessionId = sessionId,
+            AgentName = agentName,
+            Content = content
+        };
+
     public static ThreadEvent AssistantMessage(
         string threadId,
         string sessionId,
         string agentName,
-        ThreadMessageRecord message) =>
-        Create("assistant_message", threadId) with
+        ThreadMessageRecord message,
+        DateTimeOffset? timestamp = null) =>
+        Create("assistant_message", threadId, timestamp) with
         {
             SessionId = sessionId,
             AgentName = agentName,
@@ -115,8 +192,9 @@ internal sealed record ThreadEvent
         string agentName,
         string? messageFrom,
         string? content,
-        IReadOnlyList<ThreadToolCallRecord> toolCalls) =>
-        Create("tool_call", threadId) with
+        IReadOnlyList<ThreadToolCallRecord> toolCalls,
+        DateTimeOffset? timestamp = null) =>
+        Create("tool_call", threadId, timestamp) with
         {
             SessionId = sessionId,
             AgentName = agentName,
@@ -130,8 +208,9 @@ internal sealed record ThreadEvent
         string sessionId,
         string agentName,
         string? messageFrom,
-        IReadOnlyList<ThreadToolCallRecord> toolCalls) =>
-        Create("tool_result", threadId) with
+        IReadOnlyList<ThreadToolCallRecord> toolCalls,
+        DateTimeOffset? timestamp = null) =>
+        Create("tool_result", threadId, timestamp) with
         {
             SessionId = sessionId,
             AgentName = agentName,
@@ -144,8 +223,9 @@ internal sealed record ThreadEvent
         string sessionId,
         string agentName,
         string subAgentThreadId,
-        string? toolCallId) =>
-        Create("subagent_invoked", threadId) with
+        string? toolCallId,
+        DateTimeOffset? timestamp = null) =>
+        Create("subagent_invoked", threadId, timestamp) with
         {
             SessionId = sessionId,
             AgentName = agentName,
@@ -153,11 +233,11 @@ internal sealed record ThreadEvent
             ToolCallId = toolCallId
         };
 
-    private static ThreadEvent Create(string type, string threadId) =>
+    private static ThreadEvent Create(string type, string threadId, DateTimeOffset? timestamp = null) =>
         new()
         {
             Type = type,
             ThreadId = threadId,
-            Timestamp = DateTimeOffset.UtcNow
+            Timestamp = timestamp ?? DateTimeOffset.UtcNow
         };
 }

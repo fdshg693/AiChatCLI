@@ -19,18 +19,18 @@ internal sealed class AgentCommand : ISlashCommand
     private readonly AgentCatalog _agentCatalog;
     private readonly AgentSelection _agentSelection;
     private readonly IChatService _chatService;
-    private readonly ThreadSessionManager _threadSessionManager;
+    private readonly IChatTraceRecorder _chatTraceRecorder;
 
     public AgentCommand(
         AgentCatalog agentCatalog,
         AgentSelection agentSelection,
         IChatService chatService,
-        ThreadSessionManager threadSessionManager)
+        IChatTraceRecorder chatTraceRecorder)
     {
         _agentCatalog = agentCatalog;
         _agentSelection = agentSelection;
         _chatService = chatService;
-        _threadSessionManager = threadSessionManager;
+        _chatTraceRecorder = chatTraceRecorder;
     }
 
     public string Name => "agent";
@@ -135,7 +135,7 @@ internal sealed class AgentCommand : ISlashCommand
         }
 
         _chatService.SetAgent(_agentSelection.CurrentName, _agentSelection.CurrentPrompt, _agentSelection.CurrentTools);
-        _threadSessionManager.RecordAgentChange("agent_use");
+        _chatTraceRecorder.RecordAgentChanged(_agentSelection.CurrentName, "agent_use");
         output.WriteLine($"エージェントを '{name}' に切り替えました。");
     }
 
@@ -149,7 +149,7 @@ internal sealed class AgentCommand : ISlashCommand
 
         _agentSelection.EnsureCurrentSelection();
         _chatService.SetAgent(_agentSelection.CurrentName, _agentSelection.CurrentPrompt, _agentSelection.CurrentTools);
-        _threadSessionManager.RecordAgentChange("agent_reload");
+        _chatTraceRecorder.RecordAgentChanged(_agentSelection.CurrentName, "agent_reload");
         output.WriteLine($"{Path.GetFileName(_agentCatalog.SourcePath)} をエージェント定義として再読み込みしました。");
     }
 

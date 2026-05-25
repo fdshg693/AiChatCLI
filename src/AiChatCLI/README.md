@@ -12,7 +12,8 @@
 1. `appsettings.local.example.json` を `appsettings.local.json` にコピーします
 2. `appsettings.local.json` の `OpenAI:ApiKey` に API キーを設定します
 3. Tavily 検索を使う場合は `Tavily:ApiKey` も設定します
-4. ビルドして実行します
+4. 非秘密設定は repo root の `.ai_chat/settings.json` を確認・編集します
+5. ビルドして実行します
 
 ```bash
 dotnet build
@@ -30,7 +31,7 @@ dotnet test AiChatCLI.sln
 README 本体は入口に絞り、詳細は目的別ドキュメントへ分割しています。
 
 - [`docs/usage.md`](docs/usage.md): コマンド利用者向けの基本操作、slash command、template、agent、thread
-- [`docs/configuration.md`](docs/configuration.md): `appsettings.local.json`、環境変数、agent ごとの tool 定義、ログ保存先、各種設定ファイル
+- [`docs/configuration.md`](docs/configuration.md): `.ai_chat/settings.json`、`appsettings.local.json`、環境変数、agent ごとの tool 定義、ログ保存先
 - [`docs/development.md`](docs/development.md): 内部構成、責務分割、拡張ポイント、テスト方針
 - [`docs/reference.md`](docs/reference.md): コマンド一覧、agent-callable tool 一覧、ログ出力先、主要設定キーの早見表
 
@@ -48,7 +49,7 @@ defaultエージェント> exit
 - `exit` で終了します
 - `/help` でコマンド一覧を表示できます
 - `/status` で現在のモデル、agent、tool、thread、memory の状態を確認できます
-- `ChatHistory:Enabled` が有効なら、起動時に空の current thread が自動作成されます
+- `Logging:ThreadEnabled` が有効なら、起動時に空の current thread が自動作成されます
 - `Ctrl+V` または `Shift+Insert` で複数行テキストも貼り付けできます
 
 ## 主な機能
@@ -61,6 +62,7 @@ defaultエージェント> exit
 - `skill` によるローカル skill markdown の遅延読み込み
 - `search` による Tavily Web 検索
 - `logs/threads/*.jsonl` を正本にした thread replay と会話継続
+- transcript / thread / sub-agent thread を `Logging:*Enabled` で個別制御
 
 ## アーキテクチャの入口
 
@@ -68,9 +70,9 @@ defaultエージェント> exit
 
 - `Program.cs` は `AppPaths.Discover(...)`、`AppComposition.Create(...)`、`ThreadSessionManager.Initialize()`、`ChatLoop.RunAsync(...)` を呼ぶ薄い entry point です
 - `Bootstrap/` は config / path discovery と manual wiring を担います
-- `Conversation/` は REPL と 1 ターン処理、モデル送信、live / persisted message 変換を担います
+- `Conversation/` は REPL と 1 ターン処理、`ChatTraceRecorder` による trace 集約、モデル送信、live / persisted message 変換を担います
 - `Agents/` は agent 定義、tool catalog、factory、sub-agent 実行を担います
-- `Skills/` は `skills/*/SKILL.md` の読み込みと skill tool 用の prompt 注入を担います
+- `Skills/` は `Paths:SkillsDirectory` 配下の `SKILL.md` の読み込みと skill tool 用の prompt 注入を担います
 - `Threads/` は current thread lifecycle、append-only event 記録、thread replay を担います
 - `Commands/` は slash command 実装、`Prompts/` は template 管理、`Ui/` は interactive prompt を担います
 

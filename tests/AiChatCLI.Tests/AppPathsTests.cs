@@ -13,18 +13,24 @@ public sealed class AppPathsTests : IDisposable
     }
 
     [Fact]
-    public void Discover_UsesMarkerDirectoryAsContentRoot()
+    public void Discover_UsesMarkerDirectoryAsProjectRootAndFindsRepoRoot()
     {
         var repoRoot = Directory.CreateDirectory(Path.Combine(_tempRoot, "repo")).FullName;
-        File.WriteAllText(Path.Combine(repoRoot, "AiChatCLI.csproj"), "<Project />");
-        var startDirectory = Directory.CreateDirectory(Path.Combine(repoRoot, "src", "AiChatCLI", "bin", "Debug")).FullName;
+        Directory.CreateDirectory(Path.Combine(repoRoot, ".git"));
+        Directory.CreateDirectory(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName));
+        var projectRoot = Directory.CreateDirectory(Path.Combine(repoRoot, "src", "AiChatCLI")).FullName;
+        File.WriteAllText(Path.Combine(projectRoot, "AiChatCLI.csproj"), "<Project />");
+        var startDirectory = Directory.CreateDirectory(Path.Combine(projectRoot, "bin", "Debug")).FullName;
 
         var paths = AppPaths.Discover("AiChatCLI.csproj", startDirectory, Path.Combine(_tempRoot, "fallback"));
 
-        Assert.Equal(Path.GetFullPath(repoRoot), paths.ContentRoot);
+        Assert.Equal(Path.GetFullPath(projectRoot), paths.ProjectRoot);
+        Assert.Equal(Path.GetFullPath(repoRoot), paths.RepoRoot);
+        Assert.Equal(Path.GetFullPath(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName)), paths.SettingsBaseDirectoryPath);
+        Assert.Equal(Path.GetFullPath(projectRoot), paths.ContentRoot);
         Assert.Equal(
-            Path.GetFullPath(Path.Combine(repoRoot, "logs", "threads")),
-            paths.ResolveConfiguredPath(Path.Combine("logs", "threads"), AppPaths.DefaultChatHistoryDirectoryName));
+            Path.GetFullPath(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "logs", "threads")),
+            paths.ResolveConfiguredSettingsPath(Path.Combine("logs", "threads"), AppPaths.DefaultChatHistoryDirectoryName));
     }
 
     [Fact]
@@ -35,35 +41,40 @@ public sealed class AppPathsTests : IDisposable
 
         var paths = AppPaths.Discover("AiChatCLI.csproj", startDirectory, fallbackDirectory);
 
-        Assert.Equal(Path.GetFullPath(fallbackDirectory), paths.ContentRoot);
+        Assert.Equal(Path.GetFullPath(fallbackDirectory), paths.ProjectRoot);
+        Assert.Equal(Path.GetFullPath(fallbackDirectory), paths.RepoRoot);
         Assert.Equal(
-            Path.GetFullPath(Path.Combine(fallbackDirectory, "logs")),
-            paths.ResolveConfiguredPath(null, AppPaths.DefaultChatHistoryDirectoryName));
+            Path.GetFullPath(Path.Combine(fallbackDirectory, AppPaths.DefaultSettingsDirectoryName, "logs")),
+            paths.ResolveConfiguredSettingsPath(null, AppPaths.DefaultChatHistoryDirectoryName));
     }
 
     [Fact]
-    public void ResolveConfiguredPath_UsesDefaultRelativePathWhenUnset()
+    public void ResolveConfiguredSettingsPath_UsesDefaultRelativePathWhenUnset()
     {
         var repoRoot = Directory.CreateDirectory(Path.Combine(_tempRoot, "repo-defaults")).FullName;
-        File.WriteAllText(Path.Combine(repoRoot, "AiChatCLI.csproj"), "<Project />");
-        var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
+        Directory.CreateDirectory(Path.Combine(repoRoot, ".git"));
+        var projectRoot = Directory.CreateDirectory(Path.Combine(repoRoot, "src", "AiChatCLI")).FullName;
+        File.WriteAllText(Path.Combine(projectRoot, "AiChatCLI.csproj"), "<Project />");
+        var paths = AppPaths.Discover("AiChatCLI.csproj", projectRoot, repoRoot);
 
-        var resolved = paths.ResolveConfiguredPath(null, Path.Combine("data", "memory.json"));
+        var resolved = paths.ResolveConfiguredSettingsPath(null, Path.Combine("data", "memory.json"));
 
         Assert.Equal(
-            Path.GetFullPath(Path.Combine(repoRoot, "data", "memory.json")),
+            Path.GetFullPath(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "data", "memory.json")),
             resolved);
     }
 
     [Fact]
-    public void ResolvePath_PreservesAbsolutePath()
+    public void ResolveSettingsPath_PreservesAbsolutePath()
     {
         var repoRoot = Directory.CreateDirectory(Path.Combine(_tempRoot, "repo-absolute")).FullName;
-        File.WriteAllText(Path.Combine(repoRoot, "AiChatCLI.csproj"), "<Project />");
-        var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
+        Directory.CreateDirectory(Path.Combine(repoRoot, ".git"));
+        var projectRoot = Directory.CreateDirectory(Path.Combine(repoRoot, "src", "AiChatCLI")).FullName;
+        File.WriteAllText(Path.Combine(projectRoot, "AiChatCLI.csproj"), "<Project />");
+        var paths = AppPaths.Discover("AiChatCLI.csproj", projectRoot, repoRoot);
         var absolutePath = Path.GetFullPath(Path.Combine(_tempRoot, "shared", "memory.json"));
 
-        var resolved = paths.ResolvePath(absolutePath);
+        var resolved = paths.ResolveSettingsPath(absolutePath);
 
         Assert.Equal(absolutePath, resolved);
     }

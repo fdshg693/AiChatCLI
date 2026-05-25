@@ -3,27 +3,27 @@ namespace AiChatCLI;
 internal class ChatLoop
 {
     private readonly AgentSelection _agentSelection;
-    private readonly ChatHistoryLogger _chatHistory;
+    private readonly IChatTraceRecorder _chatTraceRecorder;
     private readonly InteractivePromptReader _promptReader;
     private readonly ChatTurnPipeline _chatTurnPipeline;
 
     public ChatLoop(
         AgentSelection agentSelection,
-        ChatHistoryLogger chatHistory,
+        IChatTraceRecorder chatTraceRecorder,
         InteractivePromptReader promptReader,
         ChatTurnPipeline chatTurnPipeline)
     {
         _agentSelection = agentSelection;
-        _chatHistory = chatHistory;
+        _chatTraceRecorder = chatTraceRecorder;
         _promptReader = promptReader;
         _chatTurnPipeline = chatTurnPipeline;
     }
 
     public async Task RunAsync(string modelName)
     {
-        _chatHistory.LogSessionStart(modelName, _agentSelection.CurrentName);
+        _chatTraceRecorder.RecordSessionStart(modelName, _agentSelection.CurrentName);
         Console.WriteLine($"AI Chat CLI (model: {modelName}, agent: {_agentSelection.CurrentName}, exitで終了)");
-        if (_chatHistory.LogFilePath is { } logPath)
+        if (_chatTraceRecorder.TranscriptFilePath is { } logPath)
             Console.WriteLine($"会話ログ: {logPath}");
         Console.WriteLine("---");
 
@@ -33,7 +33,7 @@ internal class ChatLoop
             if (string.IsNullOrWhiteSpace(input)) continue;
             if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
             {
-                _chatHistory.LogSessionEnd();
+                _chatTraceRecorder.RecordSessionEnd(_agentSelection.CurrentName);
                 break;
             }
 

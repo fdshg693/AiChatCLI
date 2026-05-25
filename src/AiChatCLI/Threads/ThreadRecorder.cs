@@ -1,14 +1,7 @@
-using System.Text.Json;
-
 namespace AiChatCLI;
 
 internal sealed class ThreadRecorder
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     private readonly ThreadRepository _repository;
     private readonly ConversationCodec _conversationCodec;
     private readonly string _sessionId;
@@ -20,49 +13,100 @@ internal sealed class ThreadRecorder
         _sessionId = sessionId;
     }
 
+    public void RecordSessionStarted(
+        string threadId,
+        string modelName,
+        string agentName,
+        string systemPrompt,
+        DateTimeOffset? timestamp = null) =>
+        Append(ThreadEvent.SessionStarted(
+            threadId,
+            _sessionId,
+            modelName,
+            agentName,
+            systemPrompt,
+            timestamp));
+
+    public void RecordSessionEnded(
+        string threadId,
+        string modelName,
+        string agentName,
+        string systemPrompt,
+        string reason,
+        DateTimeOffset? timestamp = null) =>
+        Append(ThreadEvent.SessionEnded(
+            threadId,
+            _sessionId,
+            modelName,
+            agentName,
+            systemPrompt,
+            reason,
+            timestamp));
+
     public void RecordSessionAttached(
         string threadId,
         string modelName,
         string agentName,
         string systemPrompt,
-        string reason) =>
+        string reason,
+        DateTimeOffset? timestamp = null) =>
         Append(ThreadEvent.SessionAttached(
             threadId,
             _sessionId,
             modelName,
             agentName,
             systemPrompt,
-            reason));
+            reason,
+            timestamp));
 
-    public void RecordSessionDetached(string threadId, string reason) =>
-        Append(ThreadEvent.SessionDetached(threadId, _sessionId, reason));
+    public void RecordSessionDetached(string threadId, string reason, DateTimeOffset? timestamp = null) =>
+        Append(ThreadEvent.SessionDetached(threadId, _sessionId, reason, timestamp));
 
-    public void RecordUserInput(string threadId, string agentName, string rawInput) =>
-        Append(ThreadEvent.UserMessage(threadId, _sessionId, agentName, rawInput));
+    public void RecordUserInput(string threadId, string agentName, string rawInput, DateTimeOffset? timestamp = null) =>
+        Append(ThreadEvent.UserMessage(threadId, _sessionId, agentName, rawInput, timestamp));
 
     public void RecordPromptTransformation(
         string threadId,
         string agentName,
         string rawInput,
-        string processedInput) =>
+        string processedInput,
+        DateTimeOffset? timestamp = null) =>
         Append(ThreadEvent.PromptTransformed(
             threadId,
             _sessionId,
             agentName,
             rawInput,
-            processedInput));
+            processedInput,
+            timestamp));
 
-    public void RecordModelRequest(string threadId, string agentName, string processedInput) =>
-        Append(ThreadEvent.ModelRequest(threadId, _sessionId, agentName, processedInput));
+    public void RecordModelRequest(string threadId, string agentName, string processedInput, DateTimeOffset? timestamp = null) =>
+        Append(ThreadEvent.ModelRequest(threadId, _sessionId, agentName, processedInput, timestamp));
 
-    public void RecordTurn(string threadId, string agentName, ChatTurnResult turnResult)
+    public void RecordSlashCommand(
+        string threadId,
+        string agentName,
+        string rawInput,
+        string capturedConsoleOutput,
+        DateTimeOffset? timestamp = null)
+    {
+        Append(ThreadEvent.SlashCommand(threadId, _sessionId, agentName, rawInput, timestamp));
+
+        if (string.IsNullOrEmpty(capturedConsoleOutput))
+            return;
+
+        var normalized = capturedConsoleOutput.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        foreach (var line in normalized.Split('\n', StringSplitOptions.None))
+            Append(ThreadEvent.SlashCommandOutput(threadId, _sessionId, agentName, line, timestamp));
+    }
+
+    public void RecordTurn(string threadId, string agentName, ChatTurnResult turnResult, DateTimeOffset? timestamp = null)
     {
         foreach (var message in turnResult.ResponseMessages)
         {
             switch (message.Kind)
             {
                 case ThreadMessageKind.Text:
-                    Append(ThreadEvent.AssistantMessage(threadId, _sessionId, agentName, message));
+                    Append(ThreadEvent.AssistantMessage(threadId, _sessionId, agentName, message, timestamp));
                     break;
                 case ThreadMessageKind.ToolCallAggregate:
                     _conversationCodec.SplitToolCallAggregate(message, out var toolCalls, out var toolResults);
@@ -72,14 +116,16 @@ internal sealed class ThreadRecorder
                         agentName,
                         message.From,
                         message.Content,
-                        toolCalls));
+                        toolCalls,
+                        timestamp));
                     Append(ThreadEvent.ToolResult(
                         threadId,
                         _sessionId,
                         agentName,
                         message.From,
-                        toolResults));
-                    RecordSubAgentInvocations(threadId, agentName, toolResults);
+                        toolResults,
+                        timestamp));
+                    RecordSubAgentInvocations(threadId, agentName, toolResults, timestamp);
                     break;
             }
         }
@@ -89,16 +135,18 @@ internal sealed class ThreadRecorder
         string threadId,
         string agentName,
         string subAgentThreadId,
-        string? toolCallId) =>
-        Append(ThreadEvent.SubAgentInvoked(threadId, _sessionId, agentName, subAgentThreadId, toolCallId));
+        string? toolCallId,
+        DateTimeOffset? timestamp = null) =>
+        Append(ThreadEvent.SubAgentInvoked(threadId, _sessionId, agentName, subAgentThreadId, toolCallId, timestamp));
 
-    public void RecordAgentChange(string threadId, string agentName, string systemPrompt, string reason) =>
+    public void RecordAgentChange(string threadId, string agentName, string systemPrompt, string reason, DateTimeOffset? timestamp = null) =>
         Append(ThreadEvent.AgentChanged(
             threadId,
             _sessionId,
             agentName,
             systemPrompt,
-            reason));
+            reason,
+            timestamp));
 
     private void Append(ThreadEvent threadEvent)
     {
@@ -108,14 +156,15 @@ internal sealed class ThreadRecorder
     private void RecordSubAgentInvocations(
         string threadId,
         string agentName,
-        IReadOnlyList<ThreadToolCallRecord> toolResults)
+        IReadOnlyList<ThreadToolCallRecord> toolResults,
+        DateTimeOffset? timestamp)
     {
         foreach (var toolResult in toolResults)
         {
             if (!string.Equals(toolResult.FunctionName, SubAgentTools.FunctionName, StringComparison.Ordinal))
                 continue;
 
-            var response = TryReadSubAgentResponse(toolResult.Result);
+            var response = SubAgentToolResponseParser.TryParse(toolResult.Result);
             if (string.IsNullOrWhiteSpace(response?.SubAgentThreadId))
                 continue;
 
@@ -123,22 +172,8 @@ internal sealed class ThreadRecorder
                 threadId,
                 agentName,
                 response.SubAgentThreadId,
-                toolResult.ToolCallId);
-        }
-    }
-
-    private static SubAgentToolResponse? TryReadSubAgentResponse(string? result)
-    {
-        if (string.IsNullOrWhiteSpace(result))
-            return null;
-
-        try
-        {
-            return JsonSerializer.Deserialize<SubAgentToolResponse>(result, JsonOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
+                toolResult.ToolCallId,
+                timestamp);
         }
     }
 }

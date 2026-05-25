@@ -39,10 +39,14 @@
 |---|---|---|
 | `OpenAI:Model` | `gpt-4o-mini` | モデル指定 |
 | `Template:MaxDepth` | `10` | `%KEY%` 展開の最大深度 |
-| `ChatHistory:Enabled` | `true` | thread / log の有効化 |
+| `ChatHistory:Enabled` | `true` | 互換用の親フラグ。未設定時の `Logging:*Enabled` 既定値 |
+| `Logging:TranscriptEnabled` | `<ChatHistory:Enabled>` | `chat_*.txt` transcript の保存可否 |
+| `Logging:ThreadEnabled` | `<ChatHistory:Enabled>` | main thread JSONL と `/thread` replay の有効化 |
+| `Logging:SubAgentThreadEnabled` | `<Logging:ThreadEnabled>` | sub-agent JSONL の有効化 |
 | `Paths:Agents` | `agents.json` | agent 定義 |
 | `Paths:Prompts` | `prompts.json` | prompt template 定義 |
 | `Paths:Memory` | `memory.json` | memory 保存先 |
+| `Paths:SkillsDirectory` | `skills` | skill ルート |
 | `Paths:ChatHistoryDirectory` | `logs` | テキストログ基底ディレクトリ |
 | `Paths:ThreadsDirectory` | `<ChatHistoryDirectory>/threads` | thread JSONL 保存先 |
 | `Paths:SubAgentThreadsDirectory` | `<ThreadsDirectory>/subagents` | sub-agent JSONL 保存先 |
@@ -54,25 +58,27 @@
 
 ## skill 配置
 
-- 既定の skill ルートは `skills/`
-- 各 skill は `skills/<skill-directory>/SKILL.md` に置く
+- skill ルートは `Paths:SkillsDirectory` で指定する
+- 各 skill は `<SkillsDirectory>/<skill-directory>/SKILL.md` に置く
 - front matter は `name` と `description` のみ対応
 - `skill` ツールの戻り値には `SKILL.md` と skill ディレクトリの絶対パスが含まれる
+- 相対パスの基準は `.ai_chat/settings.json` のあるディレクトリ
 
 ## ログ出力先
 
 | 種類 | 既定パス | 内容 |
 |---|---|---|
-| テキストログ | `logs/chat_yyyyMMdd_HHmmss_fff.txt` | セッション全体の人間向け transcript |
-| thread ログ | `logs/threads/thread_*.jsonl` | append-only の structured event log |
-| sub-agent thread ログ | `logs/threads/subagents/subagent_thread_*.jsonl` | サブエージェント用 structured event log |
+| transcript | `.ai_chat/logs/chat_yyyyMMdd_HHmmss_fff.txt` | session / 会話 / slash command / agent / thread の人間向け transcript |
+| thread ログ | `.ai_chat/logs/threads/thread_*.jsonl` | replay 正本になる append-only structured event log |
+| sub-agent thread ログ | `.ai_chat/logs/threads/subagents/subagent_thread_*.jsonl` | サブエージェント用の append-only structured event log |
 
 ## thread replay の要点
 
 - `/thread use <id>` は thread JSONL を正本として会話状態を復元します
 - user / assistant message、tool call / result、agent 状態を復元して継続します
 - thread を切り替えても過去メッセージは端末に再描画しません
-- `ChatHistory:Enabled=false` では thread 機能と structured thread log は無効です
+- `Logging:ThreadEnabled=false` では thread 機能と main thread JSONL は無効です
+- slash command、session lifecycle、agent 切り替えも replay 互換な trace event として JSONL に追記されます
 
 ## 実装把握の入口
 
@@ -80,8 +86,8 @@
 |---|---|
 | 起動と wiring | `Program.cs`, `Bootstrap/AppComposition.cs` |
 | 設定解決 | `Bootstrap/AppConfig.cs`, `Bootstrap/AppPaths.cs` |
-| 1 ターン処理 | `Conversation/ChatLoop.cs`, `Conversation/ChatTurnPipeline.cs` |
+| 1 ターン処理 | `Conversation/ChatLoop.cs`, `Conversation/ChatTurnPipeline.cs`, `Conversation/ChatTraceRecorder.cs` |
 | live/replay の message 変換 | `Conversation/ConversationCodec.cs` |
-| thread lifecycle | `Threads/ThreadSessionManager.cs`, `Threads/ThreadRecorder.cs`, `Threads/ThreadProjector.cs` |
+| thread lifecycle / structured trace | `Threads/ThreadSessionManager.cs`, `Threads/ThreadRecorder.cs`, `Threads/ThreadProjector.cs`, `Threads/ThreadEvent.cs` |
 | tool 公開 | `Agents/AgentToolCatalog.cs`, `Agents/OpenAIAgentFactory.cs`, `Skills/` |
 | slash command | `Commands/` |

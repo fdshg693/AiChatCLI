@@ -3,6 +3,8 @@
 src/AiChatCLI/appsettings.local.json
 *.env
 logs/
+.ai_chat/memory.json
+.ai_chat/logs/
 
 src/AiChatCLI/memory.json
 devtools/workflow/runs/

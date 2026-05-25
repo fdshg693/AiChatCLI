@@ -8,21 +8,22 @@ alwaysApply: false
 - `src/AiChatCLI/` is the .NET 9 console REPL for chatting with OpenAI models.
 - Keep `Program.cs` thin. It should stay focused on encoding setup, `AppPaths.Discover(...)`, `AppComposition.Create(...)`, `ThreadSessionManager.Initialize()`, and `ChatLoop.RunAsync(...)`.
 - `AppComposition.Create(...)` is the composition root. Register new slash commands, tools, services, and cross-cutting wiring there instead of spreading setup logic across unrelated files.
-- `AppConfig` owns config loading from `appsettings.json`, `appsettings.local.json`, and environment variables. Preserve that precedence and keep user-facing config names documented.
-- `AppPaths` resolves runtime files relative to the app content root. When changing `Paths:*` behavior, keep relative-path semantics consistent across agents, prompts, memory, logs, and threads.
+- `AppConfig` owns config loading from repo-root `.ai_chat/settings.json`, project-local `appsettings.local.json`, and environment variables. Keep non-secret settings and secrets separated, and keep user-facing config names documented.
+- `AppPaths` resolves runtime files from distinct bases: project root for local secrets and repo settings base for `Paths:*`. When changing path behavior, keep relative-path semantics consistent across agents, prompts, memory, skills, logs, and threads.
 
 ## Core Flow
 
 - Input flow is `InteractivePromptReader` -> `ChatLoop` -> `ChatTurnPipeline` -> slash command handling or prompt processing -> `IChatService`.
 - `ChatLoop` should remain a REPL/UI coordinator, not a home for business logic.
-- `ChatTurnPipeline` owns per-turn orchestration: slash-command dispatch, template expansion, thread recording, transcript logging, model calls, and final output mapping.
-- Keep human-readable transcript logging and structured thread logging in the same event order. Reordering those calls can break replay expectations.
+- `ChatTurnPipeline` owns per-turn orchestration: slash-command dispatch, template expansion, trace emission through `ChatTraceRecorder`, model calls, and final output mapping.
+- Keep structured thread trace and the human-readable transcript projection in the same event order. Reordering emitted trace events can break replay expectations.
 - `OpenAIChatService` and `AgentTurnExecutor` should stay focused on model interaction and tool execution, not CLI concerns.
 
 ## Threads And Replay
 
 - `ThreadSessionManager` owns current-thread lifecycle, switching, initialization, and replay integration.
 - `ThreadRecorder` owns append-only event writes; `ThreadRepository` owns persisted JSONL access; `ThreadProjector` owns projection from events to current state.
+- `ThreadEvent` is the structured trace schema and replay source of truth; prefer extending that event stream over creating parallel ad hoc logging flows.
 - `ConversationCodec` is the shared mapper between live AutoGen messages and persisted `ThreadMessageRecord` values. Do not duplicate live/replay conversions elsewhere.
 - Changes to persisted message shape, tool-call shape, or agent-state restoration usually require coordinated updates across `ConversationCodec`, thread projection, and focused replay tests.
 - Thread logs are the source of truth for `/thread use <id>`. Preserve append-only semantics and readable UTF-8 JSON output.
@@ -42,7 +43,7 @@ alwaysApply: false
 - New chat backends should implement `IChatService`.
 - `IChatService` implementations are expected to support restoring persisted conversation state when thread replay is enabled.
 - New slash commands should implement `ISlashCommand.Execute(string[] args, TextWriter output)` and be registered in `AppComposition.Create(...)`.
-- Slash commands that mutate conversation state must keep `AgentSelection`, `IChatService`, and `ThreadSessionManager` in sync.
+- Slash commands that mutate conversation state must keep `AgentSelection`, `IChatService`, and `ThreadSessionManager` in sync, and route new trace writes through `ChatTraceRecorder`.
 - New prompt/template features should go through `PromptTemplateProcessor`, `PromptTemplateManager`, and related placeholder-expansion helpers rather than one-off string replacement in the loop.
 - New tools should be registered through `AgentToolCatalog`, documented in the app docs, and reflected in status/help output when applicable.
 

@@ -21,8 +21,9 @@ public sealed class ToolVisibilityTests : IDisposable
     public void AppConfig_UsesDefaultPathsWhenUnset()
     {
         var repoRoot = CreateRepoRoot("default-config");
+        var projectRoot = GetProjectRoot(repoRoot);
         File.WriteAllText(
-            Path.Combine(repoRoot, "appsettings.json"),
+            Path.Combine(projectRoot, AppPaths.DefaultLocalAppSettingsFileName),
             """
             {
               "OpenAI": {
@@ -31,73 +32,98 @@ public sealed class ToolVisibilityTests : IDisposable
             }
             """);
 
-        var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
+        var paths = AppPaths.Discover("AiChatCLI.csproj", projectRoot, repoRoot);
         var config = new AppConfig(paths);
 
-        Assert.Equal(Path.Combine(repoRoot, "agents.json"), config.AgentsPath);
-        Assert.Equal(Path.Combine(repoRoot, "prompts.json"), config.PromptsPath);
-        Assert.Equal(Path.Combine(repoRoot, "memory.json"), config.MemoryPath);
-        Assert.Equal(Path.Combine(repoRoot, "logs"), config.ChatHistoryDirectoryPath);
-        Assert.Equal(Path.Combine(repoRoot, "logs", "threads"), config.ThreadsDirectoryPath);
-        Assert.Equal(Path.Combine(repoRoot, "logs", "threads", "subagents"), config.SubAgentThreadsDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "agents.json"), config.AgentsPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "prompts.json"), config.PromptsPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "memory.json"), config.MemoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "skills"), config.SkillsDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "logs"), config.ChatHistoryDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "logs", "threads"), config.ThreadsDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "logs", "threads", "subagents"), config.SubAgentThreadsDirectoryPath);
     }
 
     [Fact]
     public void AppConfig_ReadsConfiguredPathsFromPathsSection()
     {
         var repoRoot = CreateRepoRoot("configured-paths");
+        var projectRoot = GetProjectRoot(repoRoot);
         File.WriteAllText(
-            Path.Combine(repoRoot, "appsettings.json"),
+            GetSettingsPath(repoRoot),
             """
             {
               "OpenAI": {
-                "ApiKey": "test-key"
+                "Model": "gpt-5.4"
               },
               "Paths": {
                 "Agents": "config/agents.custom.json",
                 "Prompts": "config/prompts.custom.json",
                 "Memory": "state/memory.custom.json",
+                "SkillsDirectory": "skills/custom",
                 "ChatHistoryDirectory": "artifacts/chat",
                 "ThreadsDirectory": "artifacts/threads",
                 "SubAgentThreadsDirectory": "artifacts/subagents"
               }
             }
             """);
-
-        var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
-        var config = new AppConfig(paths);
-
-        Assert.Equal(Path.Combine(repoRoot, "config", "agents.custom.json"), config.AgentsPath);
-        Assert.Equal(Path.Combine(repoRoot, "config", "prompts.custom.json"), config.PromptsPath);
-        Assert.Equal(Path.Combine(repoRoot, "state", "memory.custom.json"), config.MemoryPath);
-        Assert.Equal(Path.Combine(repoRoot, "artifacts", "chat"), config.ChatHistoryDirectoryPath);
-        Assert.Equal(Path.Combine(repoRoot, "artifacts", "threads"), config.ThreadsDirectoryPath);
-        Assert.Equal(Path.Combine(repoRoot, "artifacts", "subagents"), config.SubAgentThreadsDirectoryPath);
-    }
-
-    [Fact]
-    public void AppConfig_FallsBackToLegacyChatHistoryDirectoryWhenPathsValueIsUnset()
-    {
-        var repoRoot = CreateRepoRoot("legacy-chat-history");
         File.WriteAllText(
-            Path.Combine(repoRoot, "appsettings.json"),
+            Path.Combine(projectRoot, AppPaths.DefaultLocalAppSettingsFileName),
             """
             {
               "OpenAI": {
                 "ApiKey": "test-key"
-              },
-              "ChatHistory": {
-                "Directory": "legacy-logs"
               }
             }
             """);
 
-        var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
+        var paths = AppPaths.Discover("AiChatCLI.csproj", projectRoot, repoRoot);
         var config = new AppConfig(paths);
 
-        Assert.Equal(Path.Combine(repoRoot, "legacy-logs"), config.ChatHistoryDirectoryPath);
-        Assert.Equal(Path.Combine(repoRoot, "legacy-logs", "threads"), config.ThreadsDirectoryPath);
-        Assert.Equal(Path.Combine(repoRoot, "legacy-logs", "threads", "subagents"), config.SubAgentThreadsDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "config", "agents.custom.json"), config.AgentsPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "config", "prompts.custom.json"), config.PromptsPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "state", "memory.custom.json"), config.MemoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "skills", "custom"), config.SkillsDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "artifacts", "chat"), config.ChatHistoryDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "artifacts", "threads"), config.ThreadsDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "artifacts", "subagents"), config.SubAgentThreadsDirectoryPath);
+        Assert.Equal("gpt-5.4", config.Model);
+    }
+
+    [Fact]
+    public void AppConfig_IgnoresProjectAppSettingsForNonSecretValues()
+    {
+        var repoRoot = CreateRepoRoot("project-appsettings-ignored");
+        var projectRoot = GetProjectRoot(repoRoot);
+        File.WriteAllText(
+            Path.Combine(projectRoot, "appsettings.json"),
+            """
+            {
+              "OpenAI": {
+                "Model": "stale-model"
+              },
+              "Paths": {
+                "ChatHistoryDirectory": "legacy-logs",
+                "SkillsDirectory": "legacy-skills"
+              }
+            }
+            """);
+        File.WriteAllText(
+            Path.Combine(projectRoot, AppPaths.DefaultLocalAppSettingsFileName),
+            """
+            {
+              "OpenAI": {
+                "ApiKey": "test-key"
+              }
+            }
+            """);
+
+        var paths = AppPaths.Discover("AiChatCLI.csproj", projectRoot, repoRoot);
+        var config = new AppConfig(paths);
+
+        Assert.Equal("gpt-4o-mini", config.Model);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "logs"), config.ChatHistoryDirectoryPath);
+        Assert.Equal(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, "skills"), config.SkillsDirectoryPath);
     }
 
     [Fact]
@@ -106,8 +132,9 @@ public sealed class ToolVisibilityTests : IDisposable
         using var _ = new EnvironmentVariableScope("OPENAI_API_KEY", null);
         using var __ = new EnvironmentVariableScope("TAVILY_API_KEY", null);
         var repoRoot = CreateRepoRoot("local-settings");
+        var projectRoot = GetProjectRoot(repoRoot);
         File.WriteAllText(
-            Path.Combine(repoRoot, "appsettings.json"),
+            GetSettingsPath(repoRoot),
             """
             {
               "OpenAI": {
@@ -116,7 +143,7 @@ public sealed class ToolVisibilityTests : IDisposable
             }
             """);
         File.WriteAllText(
-            Path.Combine(repoRoot, AppPaths.DefaultLocalAppSettingsFileName),
+            Path.Combine(projectRoot, AppPaths.DefaultLocalAppSettingsFileName),
             """
             {
               "OpenAI": {
@@ -128,7 +155,7 @@ public sealed class ToolVisibilityTests : IDisposable
             }
             """);
 
-        var paths = AppPaths.Discover("AiChatCLI.csproj", repoRoot, repoRoot);
+        var paths = AppPaths.Discover("AiChatCLI.csproj", projectRoot, repoRoot);
         var config = new AppConfig(paths);
 
         Assert.Equal("openai-local-key", config.ApiKey);
@@ -217,7 +244,10 @@ public sealed class ToolVisibilityTests : IDisposable
             agentCatalog,
             agentSelection,
             threadSessionManager,
-            toolCatalog);
+            toolCatalog,
+            transcriptLoggingEnabled: true,
+            threadLoggingEnabled: false,
+            subAgentThreadLoggingEnabled: true);
         using var output = new StringWriter();
 
         command.Execute([], output);
@@ -232,6 +262,9 @@ public sealed class ToolVisibilityTests : IDisposable
             text,
             StringComparison.Ordinal);
         Assert.Contains("agent 件数: 2", text, StringComparison.Ordinal);
+        Assert.Contains("transcript logging: enabled", text, StringComparison.Ordinal);
+        Assert.Contains("thread logging: disabled", text, StringComparison.Ordinal);
+        Assert.Contains("sub-agent thread logging: enabled", text, StringComparison.Ordinal);
         Assert.Contains($"template 定義ファイル: {promptsPath}", text, StringComparison.Ordinal);
         Assert.Contains($"agent 定義ファイル: {agentCatalog.SourcePath}", text, StringComparison.Ordinal);
         Assert.Contains($"memory 保存ファイル: {memoryStore.FilePath}", text, StringComparison.Ordinal);
@@ -246,9 +279,17 @@ public sealed class ToolVisibilityTests : IDisposable
     private string CreateRepoRoot(string directoryName)
     {
         var repoRoot = Directory.CreateDirectory(Path.Combine(_tempRoot, directoryName)).FullName;
-        File.WriteAllText(Path.Combine(repoRoot, "AiChatCLI.csproj"), "<Project />");
+        Directory.CreateDirectory(Path.Combine(repoRoot, ".git"));
+        Directory.CreateDirectory(Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName));
+        File.WriteAllText(Path.Combine(GetProjectRoot(repoRoot), "AiChatCLI.csproj"), "<Project />");
         return repoRoot;
     }
+
+    private static string GetProjectRoot(string repoRoot) =>
+        Directory.CreateDirectory(Path.Combine(repoRoot, "src", "AiChatCLI")).FullName;
+
+    private static string GetSettingsPath(string repoRoot) =>
+        Path.Combine(repoRoot, AppPaths.DefaultSettingsDirectoryName, AppPaths.DefaultSettingsFileName);
 
     private static SubAgentTools CreateSubAgentTools()
     {

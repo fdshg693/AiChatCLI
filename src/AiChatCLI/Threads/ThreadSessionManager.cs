@@ -154,39 +154,74 @@ internal sealed class ThreadSessionManager : IDisposable
         }
     }
 
-    public void RecordUserInput(string rawInput, string agentName)
+    public void RecordSessionStarted(string agentName, DateTimeOffset? timestamp = null)
     {
         if (CurrentThreadId is null || _recorder is null)
             return;
 
-        _recorder.RecordUserInput(CurrentThreadId, agentName, rawInput);
+        _recorder.RecordSessionStarted(
+            CurrentThreadId,
+            _modelName,
+            agentName,
+            _agentSelection.CurrentPrompt,
+            timestamp);
     }
 
-    public void RecordPromptTransformation(string rawInput, string processedInput, string agentName)
+    public void RecordSessionEnded(string agentName, string reason, DateTimeOffset? timestamp = null)
     {
         if (CurrentThreadId is null || _recorder is null)
             return;
 
-        _recorder.RecordPromptTransformation(CurrentThreadId, agentName, rawInput, processedInput);
+        _recorder.RecordSessionEnded(
+            CurrentThreadId,
+            _modelName,
+            agentName,
+            _agentSelection.CurrentPrompt,
+            reason,
+            timestamp);
     }
 
-    public void RecordModelRequest(string processedInput, string agentName)
+    public void RecordUserInput(string rawInput, string agentName, DateTimeOffset? timestamp = null)
     {
         if (CurrentThreadId is null || _recorder is null)
             return;
 
-        _recorder.RecordModelRequest(CurrentThreadId, agentName, processedInput);
+        _recorder.RecordUserInput(CurrentThreadId, agentName, rawInput, timestamp);
     }
 
-    public void RecordTurn(ChatTurnResult turnResult, string agentName)
+    public void RecordPromptTransformation(string rawInput, string processedInput, string agentName, DateTimeOffset? timestamp = null)
     {
         if (CurrentThreadId is null || _recorder is null)
             return;
 
-        _recorder.RecordTurn(CurrentThreadId, agentName, turnResult);
+        _recorder.RecordPromptTransformation(CurrentThreadId, agentName, rawInput, processedInput, timestamp);
     }
 
-    public void RecordAgentChange(string reason)
+    public void RecordModelRequest(string processedInput, string agentName, DateTimeOffset? timestamp = null)
+    {
+        if (CurrentThreadId is null || _recorder is null)
+            return;
+
+        _recorder.RecordModelRequest(CurrentThreadId, agentName, processedInput, timestamp);
+    }
+
+    public void RecordSlashCommand(string rawInput, string capturedOutput, string agentName, DateTimeOffset? timestamp = null)
+    {
+        if (CurrentThreadId is null || _recorder is null)
+            return;
+
+        _recorder.RecordSlashCommand(CurrentThreadId, agentName, rawInput, capturedOutput, timestamp);
+    }
+
+    public void RecordTurn(ChatTurnResult turnResult, string agentName, DateTimeOffset? timestamp = null)
+    {
+        if (CurrentThreadId is null || _recorder is null)
+            return;
+
+        _recorder.RecordTurn(CurrentThreadId, agentName, turnResult, timestamp);
+    }
+
+    public void RecordAgentChange(string reason, DateTimeOffset? timestamp = null)
     {
         if (CurrentThreadId is null || _recorder is null)
             return;
@@ -195,7 +230,8 @@ internal sealed class ThreadSessionManager : IDisposable
             CurrentThreadId,
             _agentSelection.CurrentName,
             _agentSelection.CurrentPrompt,
-            reason);
+            reason,
+            timestamp);
     }
 
     public void Shutdown(string reason = "exit")
