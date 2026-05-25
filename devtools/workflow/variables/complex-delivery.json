@@ -1,0 +1,6 @@
+{
+  "repo_name": "AiChatCLI",
+  "task_summary": "deliver the requested complex change",
+  "focus_area": "the architecture and files needed to deliver the requested complex change",
+  "acceptance_criteria": "survey the repository, create a concrete plan, implement the change, review it, and resolve important review findings"
+}

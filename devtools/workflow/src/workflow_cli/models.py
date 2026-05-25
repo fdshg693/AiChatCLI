@@ -55,19 +55,6 @@ class WorkflowConfig:
     steps: list[StepConfig] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
-class PromptStepConfig:
-    prompt: str
-    variables: dict[str, str] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class PromptConfig:
-    run_name: str | None = None
-    variables: dict[str, str] = field(default_factory=dict)
-    steps: dict[str, PromptStepConfig] = field(default_factory=dict)
-
-
 CURSOR_OPTION_FIELD_NAMES = tuple(field.name for field in fields(CursorOptions))
 
 

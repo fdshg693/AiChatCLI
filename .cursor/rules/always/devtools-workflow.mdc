@@ -10,30 +10,31 @@ alwaysApply: false
 - Use the workflow docs as the first human-facing map:
   - `devtools/workflow/README.md`: thin entry point and quick start
   - `devtools/workflow/docs/usage.md`: daily commands and run patterns
-  - `devtools/workflow/docs/customization.md`: JSON/YAML schema, merge rules, and overrides
+  - `devtools/workflow/docs/customization.md`: workflow JSON / markdown prompt schema, merge rules, and overrides
   - `devtools/workflow/docs/architecture.md`: module responsibilities and runtime flow
 
 ## Fast Repository Map
 
 - `src/workflow_cli/cli.py`: CLI entry point, subcommands, and argument parsing
 - `src/workflow_cli/workflow_loader.py`: resolves `extends` / `compose` and merges workflow JSON
-- `src/workflow_cli/prompt_config.py`: loads prompt YAML and overlays prompts / variables
 - `src/workflow_cli/options.py`: supported Cursor CLI options and invocation argument mapping
-- `src/workflow_cli/step_support.py`: builds variables, resolves paths, output files, and resume state
+- `src/workflow_cli/step_support.py`: builds variables, resolves prompt config root, output files, and resume state
+- `src/workflow_cli/templating.py`: expands `${file:...}` markdown prompts and `${name}` variables
 - `src/workflow_cli/runtime.py`: main step execution loop
 - `src/workflow_cli/cursor_cli.py`: subprocess invocation layer; inspect here for execution behavior
 - `src/workflow_cli/cursor_output.py`: extracts `chat_id` from JSON outputs
 - `src/workflow_cli/artifacts.py`: writes stdout, stderr, and metadata files
 - `src/workflow_cli/validation.py`: validate-only checks and option constraints
-- `workflows/*.json`: reusable workflow archetypes and fragments
-- `prompt_configs/*.yaml`: task-specific prompts and variables
+- `workflows/*.json`: a small set of representative workflow archetypes
+- `prompt_configs/*.md`: reusable markdown prompt bodies
+- `variables/*.json`: reusable variable sets referenced by workflow JSON
 - `tests/`: focused coverage for loader, templating, and validation
 
 ## Exploration Shortcuts
 
 - If the question is "how do I run this?", start with `devtools/workflow/docs/usage.md` and `src/workflow_cli/cli.py`.
-- If the question is "where should this config live?", start with `devtools/workflow/docs/customization.md`, then inspect `workflows/` and `prompt_configs/`.
-- If the question is "why did this merge / override happen?", inspect `src/workflow_cli/workflow_loader.py`, `src/workflow_cli/prompt_config.py`, and `src/workflow_cli/models.py`.
+- If the question is "where should this config live?", start with `devtools/workflow/docs/customization.md`, then inspect `workflows/`, `prompt_configs/`, and `variables/`.
+- If the question is "why did this merge / override happen?", inspect `src/workflow_cli/workflow_loader.py` and `src/workflow_cli/models.py`.
 - If the question is "why did this step run with these flags?", inspect `src/workflow_cli/options.py`, `src/workflow_cli/step_support.py`, and `src/workflow_cli/runtime.py`.
 - If the question is "where did this output file path come from?", inspect `src/workflow_cli/step_support.py` and `src/workflow_cli/artifacts.py`.
 - If the question is "why did resume fail or chat continuity break?", inspect `src/workflow_cli/cursor_output.py`, `src/workflow_cli/step_support.py`, and `src/workflow_cli/runtime.py`.
@@ -42,10 +43,13 @@ alwaysApply: false
 ## Conventions
 
 - Keep app runtime details such as `AppPaths`, `ChatTurnPipeline`, `ConversationCodec`, `ThreadRecorder`, thread replay, chat logging, and slash-command behavior in the app docs under `src/AiChatCLI/`; do not duplicate them here.
-- Prefer reusable `extends` and `compose` fragments for shared step structure instead of copying large step arrays.
-- Keep task-specific prompt text and variables in `prompt_configs/*.yaml`; keep shared structure in `workflows/*.json`.
+- Keep bundled workflow examples small and representative. Add new workflow JSON only when it demonstrates a distinct reusable run pattern.
+- Keep reusable prompt text in `prompt_configs/*.md`, variable sets in `variables/*.json`, and workflow structure in `workflows/*.json`.
+- Reference variables with a single `variables_file` file name. Do not combine multiple variable files or layer inline `variables` on top of a variables file.
+- Use the existing `prompt` field for both inline text and `${file:name.md}` references; do not add sibling prompt keys such as `prompt_file`.
 - Paths in workflow JSON are resolved relative to the file that defines them, not relative to the current shell directory.
+- `${file:...}` prompt references are resolved from `devtools/workflow/prompt_configs/`, not from the shell directory.
 - Output paths are generated automatically under `runs/`; do not reintroduce manual `output_file` config.
 - On Windows, prefer argument-array process execution over shell-built command strings.
-- When workflow archetypes, sample commands, prompt-config examples, or architecture descriptions change, update the matching workflow docs in the same task.
+- When workflow archetypes, sample commands, markdown prompt examples, or architecture descriptions change, update the matching workflow docs in the same task.
 - When changing execution, merging, templating, or validation behavior, update or add focused tests in `devtools/workflow/tests/` when it materially reduces regression risk.

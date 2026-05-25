@@ -1,14 +1,15 @@
 # Workflow Architecture
 
-`devtools/workflow/` は、Cursor CLI を直接ラップする薄い Python CLI です。設定の読み込み、workflow 合成、prompt 変数展開、step 実行、成果物保存を責務ごとに分け、AiChatCLI 本体とは独立したツールとして保っています。
+`devtools/workflow/` は、Cursor CLI を直接ラップする薄い Python CLI です。設定の読み込み、workflow 合成、prompt の file include / 変数展開、step 実行、成果物保存を責務ごとに分け、AiChatCLI 本体とは独立したツールとして保っています。
 
 ## 全体像
 
 入力:
 
 - workflow JSON
-- prompt YAML
-- CLI 引数 (`validate` / `run`, `--prompt-config`, `--var`, `--dry-run`)
+- markdown prompt (`prompt_configs/*.md`)
+- variables JSON (`variables/*.json`)
+- CLI 引数 (`validate` / `run`, `--var`, `--dry-run`)
 
 出力:
 
@@ -20,17 +21,17 @@
 典型的な実行フローは次の通りです。
 
 1. `cli.py` が引数を解釈し、workflow JSON を読み込む
-2. `workflow_loader.py` が `extends` / `compose` を解決し、workflow 定義を 1 個に合成する
-3. `prompt_config.py` が prompt YAML を取り込み、task 固有 prompt と変数を重ねる
-4. `validation.py` が step 構造と Cursor CLI オプションを検証する
-5. `runtime.py` が各 step を順に準備し、Cursor CLI を実行する
-6. `artifacts.py` が stdout / stderr / metadata を `runs/` に書き出す
+2. `workflow_loader.py` が `extends` / `compose` を解決し、必要なら `variables_file` から変数セットを読み込む
+3. `validation.py` が step 構造、`${file:...}` 参照、Cursor CLI オプションを検証する
+4. `runtime.py` が各 step を順に準備し、Cursor CLI を実行する
+5. `artifacts.py` が stdout / stderr / metadata を `runs/` に書き出す
 
 ## ディレクトリ構成
 
 - `src/workflow_cli/`: 本体パッケージ
-- `workflows/`: 再利用可能な workflow archetype と fragment
-- `prompt_configs/`: task 別 prompt YAML
+- `workflows/`: 代表的な workflow archetype
+- `prompt_configs/`: 再利用可能な markdown prompt
+- `variables/`: workflow から参照する JSON 変数セット
 - `runs/`: 実行結果の出力先
 - `tests/`: workflow loader、templating、validation の focused test
 
@@ -38,24 +39,23 @@
 
 ### CLI 入口
 
-- `src/workflow_cli/cli.py`: `validate` と `run` のサブコマンドを定義し、`--prompt-config`、`--var`、`--dry-run` を解釈します
+- `src/workflow_cli/cli.py`: `validate` と `run` のサブコマンドを定義し、`--var`、`--dry-run` を解釈します
 - `pyproject.toml`: `workflow-cli = "workflow_cli.cli:main"` を console script として公開します
 
 ### 設定モデル
 
-- `src/workflow_cli/models.py`: `WorkflowConfig`、`StepConfig`、`PromptConfig`、`CursorOptions` を dataclass で定義します
+- `src/workflow_cli/models.py`: `WorkflowConfig`、`StepConfig`、`CursorOptions` を dataclass で定義します
 - `src/workflow_cli/options.py`: `defaults` と step override を読み込み、最終的な Cursor CLI 引数へ変換します
 
 ### workflow 合成
 
-- `src/workflow_cli/workflow_loader.py`: `extends` と `compose` を再帰的に読み込み、`variables`、`defaults`、`steps` をルールに沿ってマージします
+- `src/workflow_cli/workflow_loader.py`: `extends` と `compose` を再帰的に読み込み、`variables_file`、`defaults`、`steps` をルールに沿って処理します
 - `steps` は `name` 単位で扱い、同名 step は置換、それ以外は末尾追加になります
 - `workspace` と `cwd` は、その項目を書いた JSON ファイル自身を基準に絶対パスへ正規化されます
 
 ### prompt 適用とテンプレート展開
 
-- `src/workflow_cli/prompt_config.py`: prompt YAML を読み込み、workflow 側の step 名と突き合わせて prompt や変数を上書きします
-- `src/workflow_cli/templating.py`: `${name}` 形式の置換を行い、未定義変数が残っていると明示的にエラーにします
+- `src/workflow_cli/templating.py`: `${file:name.md}` 形式の markdown include と `${name}` 形式の変数置換を行い、未定義変数が残っていると明示的にエラーにします
 - `src/workflow_cli/step_support.py`: 組み込み変数の組み立て、出力先決定、prompt レンダリング、`resume_from_previous` の準備を担当します
 
 ### 実行と成果物保存
@@ -67,7 +67,7 @@
 
 ### 検証
 
-- `src/workflow_cli/validation.py`: prompt 未設定、先頭 step での `resume_from_previous`、サポート外オプション値などを検出します
+- `src/workflow_cli/validation.py`: prompt 未設定、markdown include 不備、先頭 step での `resume_from_previous`、サポート外オプション値などを検出します
 - `tests/test_workflow_loader.py`: 継承・compose・パス解決周りを検証します
 - `tests/test_templating_and_validation.py`: 変数展開と validation の振る舞いを検証します
 
@@ -78,7 +78,7 @@
 - 最終 Cursor CLI オプション
 - `cwd` と `workspace`
 - `runs/<run_name>/` 配下の出力先
-- prompt に埋め込む変数
+- prompt に埋め込む markdown 本文と変数
 - 必要なら前 step から引き継ぐ `resume_chat_id`
 
 実行後は次の順で情報が保存されます。
@@ -91,12 +91,12 @@
 ## アーキテクチャ上の意図
 
 - AiChatCLI 本体とは独立した補助ツールとして保ち、.NET 側の runtime 詳細を持ち込まない
-- archetype は JSON で再利用し、task ごとの差分は YAML へ逃がして変更コストを下げる
+- archetype は JSON で再利用し、prompt 本文は markdown、task ごとの差分は `variables/*.json` として分ける
 - Windows を含む環境で安定させるため、CLI 呼び出しはシェル文字列ではなく引数配列で構築する
 - 出力とメタデータを step 単位で残し、再現性と監査性を持たせる
 
 ## 読み始める順番
 
 - 使い方を知りたい: [`usage.md`](usage.md)
-- JSON/YAML をどう設計するか知りたい: [`customization.md`](customization.md)
-- 実装を追いたい: `cli.py` -> `workflow_loader.py` -> `prompt_config.py` -> `step_support.py` -> `runtime.py`
+- workflow JSON と markdown prompt をどう設計するか知りたい: [`customization.md`](customization.md)
+- 実装を追いたい: `cli.py` -> `workflow_loader.py` -> `validation.py` -> `step_support.py` -> `templating.py` -> `runtime.py`

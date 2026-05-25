@@ -1,10 +1,37 @@
 {
   "schema_version": 1,
-  "extends": "./aichatcli-readonly-defaults.json",
-  "compose": [
-    "./aichatcli-survey-step.fragment.json",
-    "./aichatcli-plan-step.fragment.json"
-  ],
   "name": "aichatcli-dev-support",
-  "description": "Read-only workflow archetype for repository survey and planning."
+  "run_name": "aichatcli-dev-support",
+  "description": "Read-only workflow archetype for repository survey and planning.",
+  "variables_file": "dev-support.json",
+  "defaults": {
+    "command": "cursor-agent",
+    "workspace": "../../..",
+    "cwd": "../../..",
+    "mode": "ask",
+    "output_format": "text",
+    "print_mode": true,
+    "force": false,
+    "yolo": false,
+    "sandbox": "disabled",
+    "approve_mcps": false,
+    "trust": false,
+    "extra_args": []
+  },
+  "steps": [
+    {
+      "name": "repository-survey",
+      "prompt": "${file:repository-survey.md}",
+      "mode": "ask",
+      "force": false,
+      "yolo": false
+    },
+    {
+      "name": "plan-approach",
+      "prompt": "${file:plan-approach.md}",
+      "mode": "plan",
+      "force": false,
+      "yolo": false
+    }
+  ]
 }

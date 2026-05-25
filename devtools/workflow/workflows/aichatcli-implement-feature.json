@@ -1,11 +1,38 @@
 {
   "schema_version": 1,
-  "extends": "./aichatcli-write-defaults.json",
-  "compose": [
-    "./aichatcli-implement-step.fragment.json",
-    "./aichatcli-review-step.fragment.json",
-    "./aichatcli-apply-review-fixes-step.fragment.json"
-  ],
   "name": "aichatcli-implement-feature",
-  "description": "Write-enabled workflow archetype for implementation, review, and review fixes."
+  "run_name": "aichatcli-implement-feature",
+  "description": "Write-enabled workflow archetype for implementation, review, and review fixes.",
+  "variables_file": "implement-feature.json",
+  "defaults": {
+    "command": "cursor-agent",
+    "workspace": "../../..",
+    "cwd": "../../..",
+    "mode": null,
+    "output_format": "text",
+    "print_mode": true,
+    "force": true,
+    "yolo": true,
+    "sandbox": "disabled",
+    "approve_mcps": false,
+    "trust": false,
+    "extra_args": []
+  },
+  "steps": [
+    {
+      "name": "implement",
+      "prompt": "${file:implement.md}"
+    },
+    {
+      "name": "review",
+      "prompt": "${file:review.md}",
+      "mode": "ask",
+      "force": false,
+      "yolo": false
+    },
+    {
+      "name": "apply-review-fixes",
+      "prompt": "${file:apply-review-fixes.md}"
+    }
+  ]
 }

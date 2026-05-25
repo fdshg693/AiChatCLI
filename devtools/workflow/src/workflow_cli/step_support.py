@@ -48,7 +48,7 @@ def prepare_step(
         extra_variables=step.variables,
     )
     prompt = load_prompt(step)
-    rendered_prompt = render_template(prompt, variables)
+    rendered_prompt = render_template(prompt, variables, file_root=prompt_config_root(workflow_path))
 
     resume_chat_id = previous_chat_id if step.resume_from_previous else None
     if step.resume_from_previous and not resume_chat_id:
@@ -104,8 +104,12 @@ def load_prompt(step: StepConfig) -> str:
         return step.prompt
 
     raise RuntimeError(
-        f"Step '{step.name}' does not have a prompt. Provide it inline or via --prompt-config."
+        f"Step '{step.name}' does not have a prompt. Add a prompt field to the workflow step."
     )
+
+
+def prompt_config_root(workflow_path: Path) -> Path:
+    return workflow_path.parent.parent / "prompt_configs"
 
 
 def resolve_output_path(

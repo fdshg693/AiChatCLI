@@ -4,10 +4,8 @@ import argparse
 from pathlib import Path
 from typing import Literal
 
-from workflow_cli.config import (
-    apply_prompt_config,
+from workflow_cli.workflow_loader import (
     apply_variable_overrides,
-    load_prompt_config,
     load_workflow,
 )
 from workflow_cli.executor import run_workflow, validate_workflow
@@ -23,7 +21,6 @@ def main() -> int:
 
     workflow_path, workflow = _load_validated_workflow(
         args.workflow,
-        prompt_config_path=args.prompt_config,
         variable_overrides=variable_overrides,
         command=args.command,
     )
@@ -59,11 +56,6 @@ def _build_parser() -> argparse.ArgumentParser:
 def _add_common_workflow_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("workflow", type=Path, help="Path to the workflow JSON file.")
     parser.add_argument(
-        "--prompt-config",
-        type=Path,
-        help="Path to the runtime prompt YAML file.",
-    )
-    parser.add_argument(
         "--var",
         action="append",
         default=[],
@@ -75,19 +67,16 @@ def _add_common_workflow_arguments(parser: argparse.ArgumentParser) -> None:
 def _load_validated_workflow(
     workflow_path: Path,
     *,
-    prompt_config_path: Path | None,
     variable_overrides: dict[str, str],
     command: Literal["validate", "run"],
 ):
     resolved_path = workflow_path.resolve()
     workflow = load_workflow(resolved_path)
-    if prompt_config_path is not None:
-        workflow = apply_prompt_config(workflow, load_prompt_config(prompt_config_path.resolve()))
     workflow = apply_variable_overrides(workflow, variable_overrides)
     validation_errors = validate_workflow(
         workflow,
         resolved_path,
-        require_prompts=(command == "run" or prompt_config_path is not None),
+        require_prompts=True,
     )
     if validation_errors:
         for message in validation_errors:

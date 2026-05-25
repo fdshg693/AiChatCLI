@@ -21,8 +21,9 @@ STEP_PATH_FIELDS = {"workspace", "cwd"}
 
 
 def load_workflow(path: Path) -> WorkflowConfig:
+    resolved_path = path.resolve()
     raw = _resolve_workflow_definition(
-        path.resolve(),
+        resolved_path,
         stack=(),
         depth=0,
     )
@@ -30,7 +31,7 @@ def load_workflow(path: Path) -> WorkflowConfig:
     schema_version = expect_int(raw.get("schema_version", 1), "schema_version")
     name = expect_str(raw.get("name"), "name")
     description = expect_optional_str(raw.get("description"), "description") or ""
-    variables = expect_string_dict(raw.get("variables", {}), "variables")
+    variables = _load_variables(raw, variables_root=variables_root(resolved_path))
     defaults = load_defaults(raw.get("defaults", {}))
     steps = _load_steps(raw.get("steps"))
 
@@ -46,6 +47,37 @@ def load_workflow(path: Path) -> WorkflowConfig:
         defaults=defaults,
         steps=steps,
     )
+
+
+def variables_root(workflow_path: Path) -> Path:
+    return workflow_path.parent.parent / "variables"
+
+
+def _load_variables(raw: dict[str, Any], *, variables_root: Path) -> dict[str, str]:
+    variables_file = raw.get("variables_file")
+    inline_variables = raw.get("variables")
+    if variables_file is not None and inline_variables is not None:
+        raise ValueError("variables_file cannot be combined with inline variables.")
+    if variables_file is None:
+        return expect_string_dict(inline_variables or {}, "variables")
+
+    variables_path = _resolve_variables_file(variables_root, expect_str(variables_file, "variables_file"))
+    if not variables_path.exists():
+        raise ValueError(f"variables_file does not exist: {variables_file}")
+    if not variables_path.is_file():
+        raise ValueError(f"variables_file is not a file: {variables_file}")
+    raw_variables = _read_workflow_object(variables_path)
+    return expect_string_dict(raw_variables, f"variables_file {variables_path}")
+
+
+def _resolve_variables_file(root: Path, raw_reference: str) -> Path:
+    reference_path = Path(raw_reference)
+    if reference_path.is_absolute() or reference_path.name != raw_reference:
+        raise ValueError(f"variables_file must be a JSON file name under variables: {raw_reference}")
+    if reference_path.suffix.lower() != ".json":
+        raise ValueError(f"variables_file must point to a JSON file: {raw_reference}")
+
+    return (root.resolve() / reference_path).resolve()
 
 
 def apply_variable_overrides(workflow: WorkflowConfig, overrides: dict[str, str]) -> WorkflowConfig:
@@ -70,7 +102,7 @@ def _load_steps(raw: Any) -> list[StepConfig]:
         prompt = expect_optional_str(item.get("prompt"), f"{prefix}.prompt")
         if "prompt_file" in item:
             raise ValueError(
-                f"{prefix}.prompt_file is no longer supported. Move prompts into a runtime YAML file."
+                f"{prefix}.prompt_file is not supported. Use prompt with ${{file:path.md}} references instead."
             )
         if "output_file" in item:
             raise ValueError(

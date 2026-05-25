@@ -1,0 +1,6 @@
+{
+  "repo_name": "AiChatCLI",
+  "task_summary": "support ongoing AiChatCLI development across overall architecture, prompt handling, and workflow integration",
+  "focus_area": "overall architecture, prompt handling, and workflow integration",
+  "acceptance_criteria": "group the work into logical themes, call out dependencies or sequencing, and suggest the next task that should be tackled first"
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+import tempfile
 
 from workflow_cli.cursor_output import extract_chat_id, parse_cursor_output
 from workflow_cli.models import CursorOptions, StepConfig, WorkflowConfig
@@ -19,6 +20,36 @@ class TemplatingTests(unittest.TestCase):
     def test_render_template_reports_available_variables(self) -> None:
         with self.assertRaisesRegex(ValueError, "Available variables: present"):
             render_template("${missing}", {"present": "demo"})
+
+    def test_render_template_expands_markdown_file_before_variables(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            prompt_root = Path(temp_dir)
+            (prompt_root / "prompt.md").write_text("Hello $${name} ${name}.", encoding="utf-8")
+
+            rendered = render_template("Start: ${file:prompt.md}", {"name": "AiChatCLI"}, file_root=prompt_root)
+
+            self.assertEqual(rendered, "Start: Hello ${name} AiChatCLI.")
+
+    def test_render_template_leaves_escaped_file_reference_literal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            rendered = render_template("$${file:prompt.md}", {}, file_root=Path(temp_dir))
+
+            self.assertEqual(rendered, "${file:prompt.md}")
+
+    def test_render_template_rejects_missing_markdown_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(ValueError, "Prompt file does not exist"):
+                render_template("${file:missing.md}", {}, file_root=Path(temp_dir))
+
+    def test_render_template_rejects_malformed_file_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(ValueError, "Malformed"):
+                render_template("${file:missing.md", {}, file_root=Path(temp_dir))
+
+    def test_render_template_rejects_file_reference_outside_prompt_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(ValueError, "must stay under prompt_configs"):
+                render_template("${file:../escape.md}", {}, file_root=Path(temp_dir))
 
 
 class CursorOutputTests(unittest.TestCase):
@@ -55,6 +86,20 @@ class WorkflowValidationTests(unittest.TestCase):
         messages = validate_workflow(workflow, Path("workflow.json"), require_prompts=False)
 
         self.assertEqual(messages, [])
+
+    def test_validate_reports_invalid_prompt_file_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            workflow_path = root / "workflows" / "workflow.json"
+            workflow_path.parent.mkdir()
+            workflow = WorkflowConfig(
+                name="template",
+                steps=[StepConfig(name="implement", prompt="${file:missing.md}")],
+            )
+
+            messages = validate_workflow(workflow, workflow_path)
+
+            self.assertTrue(any("Prompt file does not exist" in message for message in messages))
 
     def test_output_path_uses_run_name_when_available(self) -> None:
         workflow = WorkflowConfig(

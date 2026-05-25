@@ -1,0 +1,6 @@
+{
+  "repo_name": "AiChatCLI",
+  "task_summary": "implement the requested feature",
+  "focus_area": "the files and behavior needed for the requested feature",
+  "acceptance_criteria": "complete the feature, preserve existing behavior, and keep the implementation aligned with the current architecture"
+}

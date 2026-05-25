@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Configurable batch workflow runner for Cursor CLI."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["PyYAML"]
+dependencies = []
 
 [project.scripts]
 workflow-cli = "workflow_cli.cli:main"
