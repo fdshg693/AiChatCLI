@@ -8,6 +8,7 @@ alwaysApply: false
 - `src/AiChatCLI/` is the .NET 9 console REPL for chatting with OpenAI models.
 - Keep `Program.cs` thin. It should stay focused on encoding setup, `AppPaths.Discover(...)`, `AppComposition.Create(...)`, `ThreadSessionManager.Initialize()`, and `ChatLoop.RunAsync(...)`.
 - `AppComposition.Create(...)` is the composition root. Register new slash commands, tools, services, and cross-cutting wiring there instead of spreading setup logic across unrelated files.
+- Keep agent-callable tool adapters and `AgentToolCatalog` under `src/AiChatCLI/Tools/`. Leave domain services such as memory storage, skill catalog loading, or search clients in their existing feature folders unless the tool boundary itself is moving.
 - `AppConfig` owns config loading from repo-root `.ai_chat/settings.json`, project-local `appsettings.local.json`, and environment variables. Keep non-secret settings and secrets separated, and keep user-facing config names documented.
 - `AppPaths` resolves runtime files from distinct bases: project root for local secrets and repo settings base for `Paths:*`. When changing path behavior, keep relative-path semantics consistent across agents, prompts, memory, skills, logs, and threads.
 

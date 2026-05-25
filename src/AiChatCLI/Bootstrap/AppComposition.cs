@@ -46,19 +46,25 @@ internal sealed class AppComposition : IDisposable
                 config.MaxTemplateDepth);
             var agentSelection = new AgentSelection(agentCatalog);
             ValidateConfiguredAgentTools(agentCatalog);
+
             var memoryStore = new MemoryStore(config.MemoryPath);
+            var skillCatalog = new SkillCatalog(config.SkillsDirectoryPath, textFileReader);
+            var skillPromptAugmenter = new SkillPromptAugmenter(skillCatalog);
+
+            // Build agent-callable tool adapters from their underlying app services.
             var memoryTools = new MemoryTools(memoryStore);
             var fileReadTools = new FileReadTools(sessionWorkingDirectory, textFileReader);
             var commandTools = new CommandTools(
                 new ConsoleCommandApprovalPrompt(),
                 new LocalCommandExecutor());
-            var skillCatalog = new SkillCatalog(config.SkillsDirectoryPath, textFileReader);
-            var skillPromptAugmenter = new SkillPromptAugmenter(skillCatalog);
+            var skillTools = new SkillTools(skillCatalog);
+
             var toolCatalog = new AgentToolCatalog();
             toolCatalog.RegisterMemoryTool(memoryTools);
             toolCatalog.RegisterFileReadTool(fileReadTools);
             toolCatalog.RegisterCommandTool(commandTools);
-            toolCatalog.RegisterSkillTool(new SkillTools(skillCatalog));
+            toolCatalog.RegisterSkillTool(skillTools);
+
             var searchToolEnabled = agentCatalog
                 .GetAgents()
                 .Any(agent => agent.Value.EnabledTools.Contains(TavilySearchTools.BaseToolName));
@@ -71,8 +77,9 @@ internal sealed class AppComposition : IDisposable
                 }
 
                 searchHttpClient = new HttpClient();
-                toolCatalog.RegisterSearchTool(new TavilySearchTools(
-                    new TavilySearchClient(config.TavilyApiKey!, searchHttpClient)));
+                var searchTools = new TavilySearchTools(
+                    new TavilySearchClient(config.TavilyApiKey!, searchHttpClient));
+                toolCatalog.RegisterSearchTool(searchTools);
             }
 
             var conversationCodec = new ConversationCodec();
@@ -95,6 +102,7 @@ internal sealed class AppComposition : IDisposable
                 subAgentRepository,
                 config.Model);
             toolCatalog.RegisterSubAgentTool(new SubAgentTools(subAgentRunner));
+
             var chatService = new OpenAIChatService(
                 agentFactory,
                 conversationCodec,

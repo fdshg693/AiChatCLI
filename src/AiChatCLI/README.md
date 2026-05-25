@@ -71,8 +71,9 @@ defaultエージェント> exit
 - `Program.cs` は `AppPaths.Discover(...)`、`AppComposition.Create(...)`、`ThreadSessionManager.Initialize()`、`ChatLoop.RunAsync(...)` を呼ぶ薄い entry point です
 - `Bootstrap/` は config / path discovery と manual wiring を担います
 - `Conversation/` は REPL と 1 ターン処理、`ChatTraceRecorder` による trace 集約、モデル送信、live / persisted message 変換を担います
-- `Agents/` は agent 定義、tool catalog、factory、sub-agent 実行を担います
-- `Skills/` は `Paths:SkillsDirectory` 配下の `SKILL.md` の読み込みと skill tool 用の prompt 注入を担います
+- `Agents/` は agent 定義、selection、組み込み placeholder、OpenAI agent factory を担います
+- `Tools/` は `AgentToolCatalog` と agent-callable tool adapter、sub-agent tool の補助型を集約します
+- `Skills/` は `Paths:SkillsDirectory` 配下の `SKILL.md` の読み込みと skill metadata の prompt 注入を担います
 - `Threads/` は current thread lifecycle、append-only event 記録、thread replay を担います
 - `Commands/` は slash command 実装、`Prompts/` は template 管理、`Ui/` は interactive prompt を担います
 

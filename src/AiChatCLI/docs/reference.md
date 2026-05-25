@@ -89,5 +89,5 @@
 | 1 ターン処理 | `Conversation/ChatLoop.cs`, `Conversation/ChatTurnPipeline.cs`, `Conversation/ChatTraceRecorder.cs` |
 | live/replay の message 変換 | `Conversation/ConversationCodec.cs` |
 | thread lifecycle / structured trace | `Threads/ThreadSessionManager.cs`, `Threads/ThreadRecorder.cs`, `Threads/ThreadProjector.cs`, `Threads/ThreadEvent.cs` |
-| tool 公開 | `Agents/AgentToolCatalog.cs`, `Agents/OpenAIAgentFactory.cs`, `Skills/` |
+| tool 公開 | `Tools/AgentToolCatalog.cs`, `Tools/`, `Agents/OpenAIAgentFactory.cs`, `Skills/` |
 | slash command | `Commands/` |
